@@ -44,6 +44,8 @@ dependencies:
   record: ^6.1.2
   web_socket_channel: ^3.0.3
   http: ^1.6.0
+  google_mlkit_text_recognition: ^0.13.0
+  flutter_tts: ^4.1.0
 
 
 dependency_overrides:
