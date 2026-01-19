@@ -22,5 +22,9 @@
   <string>1.0</string>
   <key>MinimumOSVersion</key>
   <string>13.0</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Microphone is required for speech recognition</string>
+  <key>NSCameraUsageDescription</key>
+  <string>Camera is required for camera access</string>
 </dict>
 </plist>

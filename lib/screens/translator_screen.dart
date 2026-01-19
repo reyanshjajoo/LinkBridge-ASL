@@ -74,7 +74,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blueGrey[50],
+      backgroundColor: const Color.fromARGB(255, 122, 217, 168),
       appBar: AppBar(title: const Text("ASL Camera Translator")),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -107,7 +107,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: const Color.fromARGB(255, 60, 120, 88),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: const [
                     BoxShadow(
