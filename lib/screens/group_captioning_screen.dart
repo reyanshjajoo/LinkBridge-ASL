@@ -318,9 +318,6 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 122, 217, 168),
-      appBar: AppBar(
-        title: const Text("Group Captioning"),
-      ),
       body: Column(
         children: [
           // Error Display

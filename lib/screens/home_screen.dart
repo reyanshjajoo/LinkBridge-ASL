@@ -30,30 +30,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // One scaffold for the whole app shell
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 122, 217, 168),
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          _index == 0
-              ? "Camera"
-              : _index == 1
-                  ? "Audio"
-                  : _index == 2
-                      ? "Learn"
-                      : "Account",
-          style: const TextStyle(
-            color: Color.fromARGB(255, 20, 35, 28),
-            fontWeight: FontWeight.w700,
-          ),
+  backgroundColor: Colors.white,
+  elevation: 1, // subtle separation from green background
+  centerTitle: true,
+  title: Text(
+    _index == 0
+        ? "Camera"
+        : _index == 1
+            ? "Audio"
+            : _index == 2
+                ? "Learn"
+                : "Account",
+    style: const TextStyle(
+      color: Color.fromARGB(255, 20, 35, 28),
+      fontWeight: FontWeight.w700,
+    ),
+  ),
+  actions: [
+    if (_index == 3)
+      IconButton(
+        icon: const Icon(
+          Icons.logout,
+          color: Color.fromARGB(255, 20, 35, 28),
         ),
-        actions: [
-          if (_index == 3)
-            IconButton(
-              icon: const Icon(Icons.logout, color: Color.fromARGB(255, 20, 35, 28)),
-              onPressed: _signOut,
-            ),
-        ],
+        onPressed: _signOut,
       ),
+  ],
+),
+
 
       body: SafeArea(
         child: IndexedStack(

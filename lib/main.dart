@@ -10,9 +10,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // This MUST run before runApp()
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MyApp());
 }
@@ -24,6 +22,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: Color.fromARGB(255, 60, 120, 88),
+          selectionColor: Color.fromARGB(255, 122, 217, 168),
+          selectionHandleColor: Color.fromARGB(255, 60, 120, 88),
+        ),
+      ),
+
       initialRoute: "/login",
       routes: {
         "/login": (context) => const LoginScreen(),
