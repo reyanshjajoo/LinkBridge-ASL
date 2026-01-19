@@ -1,8 +1,8 @@
+import 'package:asl_app/screens/group_captioning_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'translator_screen.dart';
-import 'audio_translator_screen.dart';
 import 'education_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -62,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
             // These screens should ideally NOT create their own Scaffold/AppBar.
             // If they currently do, scroll down to the note below.
             const TranslatorScreen(),
-            const AudioTranslatorScreen(),
+            const GroupCaptioningScreen(),
             const EducationScreen(),
 
             // Account tab (simple, no card)
