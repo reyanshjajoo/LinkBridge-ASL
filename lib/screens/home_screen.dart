@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'translator_screen.dart';
 import 'education_screen.dart';
+import 'text_audio_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,50 +31,45 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // One scaffold for the whole app shell
       appBar: AppBar(
-  backgroundColor: Colors.white,
-  elevation: 1, // subtle separation from green background
-  centerTitle: true,
-  title: Text(
-    _index == 0
-        ? "Camera"
-        : _index == 1
-            ? "Audio"
-            : _index == 2
-                ? "Learn"
-                : "Account",
-    style: const TextStyle(
-      color: Color.fromARGB(255, 20, 35, 28),
-      fontWeight: FontWeight.w700,
-    ),
-  ),
-  actions: [
-    if (_index == 3)
-      IconButton(
-        icon: const Icon(
-          Icons.logout,
-          color: Color.fromARGB(255, 20, 35, 28),
+        backgroundColor: Colors.white,
+        elevation: 1, // subtle separation from green background
+        centerTitle: true,
+        title: Text(
+          _index == 0
+              ? "Camera"
+              : _index == 1
+              ? "Text Reader"
+              : _index == 2
+              ? "Audio"
+              : _index == 3
+              ? "Learn"
+              : "Account",
+          style: const TextStyle(
+            color: Color.fromARGB(255, 20, 35, 28),
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        onPressed: _signOut,
+        actions: [
+          if (_index == 3)
+            IconButton(
+              icon: const Icon(
+                Icons.logout,
+                color: Color.fromARGB(255, 20, 35, 28),
+              ),
+              onPressed: _signOut,
+            ),
+        ],
       ),
-  ],
-),
-
 
       body: SafeArea(
         child: IndexedStack(
           index: _index,
           children: [
-            // These screens should ideally NOT create their own Scaffold/AppBar.
-            // If they currently do, scroll down to the note below.
             const TranslatorScreen(),
+            const TextReaderPage(),
             const GroupCaptioningScreen(),
             const EducationScreen(),
-
-            // Account tab (simple, no card)
-            _AccountPage(
-              email: user?.email,
-              onSignOut: _signOut,
-            ),
+            _AccountPage(email: user?.email, onSignOut: _signOut),
           ],
         ),
       ),
@@ -88,6 +84,10 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.pan_tool_alt_outlined),
             label: "Camera",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.text_snippet_outlined),
+            label: "Text Reader",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.mic_none_outlined),
@@ -111,10 +111,7 @@ class _AccountPage extends StatelessWidget {
   final String? email;
   final Future<void> Function() onSignOut;
 
-  const _AccountPage({
-    required this.email,
-    required this.onSignOut,
-  });
+  const _AccountPage({required this.email, required this.onSignOut});
 
   @override
   Widget build(BuildContext context) {
