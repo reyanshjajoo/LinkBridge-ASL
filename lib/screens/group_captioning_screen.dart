@@ -114,7 +114,9 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
     });
 
     try {
-      final uri = Uri.parse('$_wsUrl?conversation_id=$_conversationId');
+      final uri = _buildWebSocketUri(_wsUrl, {
+        'conversation_id': _conversationId,
+      });
       _webSocketChannel = WebSocketChannel.connect(uri);
 
       _webSocketChannel!.stream.listen(
@@ -132,6 +134,32 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
         _errorMessage = 'Failed to connect to server: $e';
       });
     }
+  }
+
+  Uri _buildWebSocketUri(
+    String rawUrl,
+    Map<String, String> queryParameters,
+  ) {
+    final parsed = Uri.parse(rawUrl);
+
+    final normalizedScheme = switch (parsed.scheme) {
+      'ws' || 'wss' => parsed.scheme,
+      'http' => 'ws',
+      'https' => 'wss',
+      _ => throw ArgumentError(
+        'Unsupported WebSocket URL scheme: ${parsed.scheme}. Use ws, wss, http, or https.',
+      ),
+    };
+
+    final mergedQuery = <String, String>{
+      ...parsed.queryParameters,
+      ...queryParameters,
+    };
+
+    return parsed.replace(
+      scheme: normalizedScheme,
+      queryParameters: mergedQuery,
+    );
   }
 
   // Phase 4: Receiving Live Captions
