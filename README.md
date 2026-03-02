@@ -228,18 +228,20 @@ If features are not working:
 
 PROJECT STRUCTURE
 
+```
 lib/
- ├── main.dart
- ├── screens/
- │    ├── login_screen.dart
- │    ├── register_screen.dart
- │    ├── home_screen.dart
- │    ├── translator_screen.dart
- │    ├── group_captioning_screen.dart
- │    ├── education_screen.dart
- │    └── caption_review_screen.dart
- └── services/
-      └── caption_review_service.dart
+├── main.dart
+├── screens/
+│   ├── login_screen.dart
+│   ├── register_screen.dart
+│   ├── home_screen.dart
+│   ├── translator_screen.dart
+│   ├── group_captioning_screen.dart
+│   ├── education_screen.dart
+│   └── caption_review_screen.dart
+└── services/
+    └── caption_review_service.dart
+```
 
 ------------------------------------------------------------
 
