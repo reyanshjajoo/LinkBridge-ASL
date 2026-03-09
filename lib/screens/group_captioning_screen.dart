@@ -56,7 +56,7 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
   // Phase 2: WebSocket Connection
   WebSocketChannel? _webSocketChannel;
   static const String _wsUrl =
-      'https://aslappserver.onrender.com/speech/ws'; // Update with your backend URL
+      'wss://aslappserver.onrender.com/speech/ws'; // Update with your backend URL
   static const String _finalizeUrl =
       'https://aslappserver.onrender.com/speech/finalize'; // Update with your backend URL
 
@@ -69,6 +69,7 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
   // Phase 9: Error Handling
   String? _errorMessage;
   bool _isConnecting = false;
+  bool _isEndingSession = false;
 
   @override
   void initState() {
@@ -117,18 +118,23 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
       final uri = _buildWebSocketUri(_wsUrl, {
         'conversation_id': _conversationId,
       });
+      print('[WS] Connecting to: $uri');
       _webSocketChannel = WebSocketChannel.connect(uri);
+      print('[WS] WebSocketChannel created, waiting for stream...');
 
       _webSocketChannel!.stream.listen(
         _handleWebSocketMessage,
         onError: _handleWebSocketError,
         onDone: _handleWebSocketDone,
       );
+      print('[WS] Stream listener attached');
 
       setState(() {
         _isConnecting = false;
       });
+      print('[WS] Connection setup complete');
     } catch (e) {
+      print('[WS] Connection error: $e');
       setState(() {
         _isConnecting = false;
         _errorMessage = 'Failed to connect to server: $e';
@@ -156,6 +162,14 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
       ...queryParameters,
     };
 
+    if (parsed.hasPort && parsed.port > 0) {
+      return parsed.replace(
+        scheme: normalizedScheme,
+        port: parsed.port,
+        queryParameters: mergedQuery,
+      );
+    }
+
     return parsed.replace(
       scheme: normalizedScheme,
       queryParameters: mergedQuery,
@@ -164,6 +178,7 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
 
   // Phase 4: Receiving Live Captions
   void _handleWebSocketMessage(dynamic message) {
+    print('[WS] Received message: $message');
     try {
       final data = json.decode(message);
 
@@ -188,15 +203,14 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
   }
 
   void _handleWebSocketError(error) {
-    setState(() {
-      _errorMessage = 'Connection error: $error';
-    });
+    print('[WS] Error: $error');
+    unawaited(_terminateSession(errorMessage: 'Connection error: $error'));
   }
 
   void _handleWebSocketDone() {
-    setState(() {
-      _webSocketChannel = null;
-    });
+    print('[WS] Connection closed (onDone)');
+    if (_isEndingSession) return;
+    unawaited(_terminateSession(errorMessage: 'Session ended by server.'));
   }
 
   // Phase 1: Audio Capture
@@ -206,6 +220,7 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
       return;
     }
 
+    print('[Audio] Starting audio capture...');
     try {
       // Configure audio recording: 16kHz, Mono, 16-bit PCM
       final stream = await _audioRecorder.startStream(
@@ -220,29 +235,43 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
       setState(() {
         _isRecording = true;
       });
+      print('[Audio] Recording started, streaming to server...');
 
       // Phase 3: Audio Streaming
       _streamAudioToServer(stream);
     } catch (e) {
+      print('[Audio] Failed to start: $e');
       _showError('Failed to start audio capture: $e');
     }
   }
 
   Future<void> _stopAudioCapture() async {
+    print('[Audio] Stopping audio capture...');
     try {
       await _audioRecorder.stop();
-      setState(() {
+      print('[Audio] Audio recorder stopped');
+      if (mounted) {
+        setState(() {
+          _isRecording = false;
+        });
+      } else {
         _isRecording = false;
-      });
+      }
     } catch (e) {
-      print('Error stopping audio capture: $e');
+      print('[Audio] Error stopping audio capture: $e');
     }
   }
 
   // Phase 3: Audio Streaming
-  void _streamAudioToServer(Stream<Uint8List> audioStream) {
-    if (_webSocketChannel == null) return;
+  int _chunkCount = 0;
 
+  void _streamAudioToServer(Stream<Uint8List> audioStream) {
+    if (_webSocketChannel == null) {
+      print('[Audio] Cannot stream: WebSocket is null');
+      return;
+    }
+
+    _chunkCount = 0;
     audioStream.listen(
       (audioData) {
         if (_webSocketChannel != null && audioData.isNotEmpty) {
@@ -251,40 +280,59 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
           final message = {'event': 'audio_chunk', 'data': base64Audio};
 
           _webSocketChannel!.sink.add(json.encode(message));
+          _chunkCount++;
+          if (_chunkCount <= 5 || _chunkCount % 50 == 0) {
+            print('[Audio] Sent chunk #$_chunkCount (${audioData.length} bytes)');
+          }
         }
       },
       onError: (error) {
-        print('Audio stream error: $error');
+        print('[Audio] Stream error: $error');
+      },
+      onDone: () {
+        print('[Audio] Stream ended. Total chunks sent: $_chunkCount');
       },
     );
   }
 
   // Phase 7: Session Control
   Future<void> _startSession() async {
+    if (_isEndingSession) return;
+
     await _connectWebSocket();
+    if (_webSocketChannel == null) {
+      return;
+    }
+
     await _startAudioCapture();
   }
 
   Future<void> _endSession() async {
-    // Send end event
-    if (_webSocketChannel != null) {
-      final endMessage = {'event': 'end'};
-      _webSocketChannel!.sink.add(json.encode(endMessage));
-    }
-
-    await _stopAudioCapture();
-    await _closeWebSocket();
-    await _finalizeSession();
+    await _terminateSession();
   }
 
   Future<void> _closeWebSocket() async {
     if (_webSocketChannel != null) {
-      await _webSocketChannel!.sink.close();
+      print('[WS] Closing WebSocket...');
+      try {
+        await _webSocketChannel!.sink.close().timeout(
+          const Duration(seconds: 3),
+          onTimeout: () {
+            print('[WS] Close timed out after 3s');
+          },
+        );
+        print('[WS] WebSocket closed');
+      } catch (e) {
+        print('[WS] Error closing WebSocket: $e');
+      }
       _webSocketChannel = null;
+    } else {
+      print('[WS] WebSocket already null, nothing to close');
     }
   }
 
   Future<void> _finalizeSession() async {
+    print('[Session] Finalizing session with ${_captions.length} captions...');
     try {
       final response = await http.post(
         Uri.parse(_finalizeUrl),
@@ -293,18 +341,60 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
           'conversation_id': _conversationId,
           'captions': _captions.map((c) => c.toJson()).toList(),
         }),
-      );
+      ).timeout(const Duration(seconds: 10));
 
-      if (response.statusCode != 200) {
-        print('Failed to finalize session: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        print('[Session] Finalize successful');
+      } else {
+        print('[Session] Finalize failed: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error finalizing session: $e');
+      print('[Session] Error finalizing session: $e');
     }
   }
 
   Future<void> _stopSession() async {
-    await _endSession();
+    await _terminateSession();
+  }
+
+  Future<void> _terminateSession({String? errorMessage}) async {
+    if (_isEndingSession) return;
+    _isEndingSession = true;
+    print('[Session] Terminating session...');
+
+    try {
+      if (_webSocketChannel != null) {
+        try {
+          final endMessage = {'event': 'end'};
+          _webSocketChannel!.sink.add(json.encode(endMessage));
+          print('[Session] Sent end event');
+        } catch (e) {
+          print('[Session] Failed to send end event: $e');
+        }
+      }
+
+      await _stopAudioCapture();
+      await _closeWebSocket();
+      await _finalizeSession();
+      print('[Session] Termination complete');
+    } finally {
+      print('[Session] Resetting state flags...');
+      if (mounted) {
+        setState(() {
+          _isRecording = false;
+          _isConnecting = false;
+          if (errorMessage != null) {
+            _errorMessage = errorMessage;
+          }
+        });
+      } else {
+        _isRecording = false;
+        _isConnecting = false;
+      }
+
+      _isEndingSession = false;
+      print('[Session] Session fully terminated');
+    }
   }
 
   void _scrollToBottom() {
@@ -320,6 +410,8 @@ class _GroupCaptioningScreenState extends State<GroupCaptioningScreen> {
   }
 
   void _showError(String message) {
+    if (!mounted) return;
+
     setState(() {
       _errorMessage = message;
     });
