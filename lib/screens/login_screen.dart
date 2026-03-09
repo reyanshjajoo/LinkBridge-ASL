@@ -98,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 122, 217, 168),
+      backgroundColor: const Color(0xFFFFDAB9),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -127,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 60, 120, 88),
+                  color: const Color(0xFF3C3C3C),
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: const [
                     BoxShadow(
@@ -143,8 +143,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Image.asset(
-                      'assets/logo.webp',
-                      height: 72,
+                      'assets/logo.png',
+                      height: 180,
                       fit: BoxFit.contain,
                     ),
                     const SizedBox(height: 12),
@@ -225,9 +225,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: isLoading ? null : handleLogin,
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
-                        backgroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.white70,
-                        foregroundColor: const Color.fromARGB(255, 60, 120, 88),
+                        backgroundColor: const Color(0xFFF7EFDD),
+                        disabledBackgroundColor: const Color(0xFFEEE0C9),
+                        foregroundColor: const Color(0xFF3C3C3C),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -238,8 +238,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color.fromARGB(255, 60, 120, 88),
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF3C3C3C),
                                 ),
                               ),
                             )

@@ -98,7 +98,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 122, 217, 168),
+      backgroundColor: const Color(0xFFFFDAB9),
       appBar: AppBar(
         title: const Text("ASL Camera Translator"),
         actions: [
@@ -140,7 +140,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 60, 120, 88),
+                  color: const Color(0xFFFFF8F0),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: const [
                     BoxShadow(
@@ -158,6 +158,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
+                        color: Color(0xFF3C3C3C),
                       ),
                     ),
 
@@ -167,7 +168,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
                       child: SingleChildScrollView(
                         child: Text(
                           recognizedSign,
-                          style: const TextStyle(fontSize: 24),
+                          style: const TextStyle(fontSize: 24, color: Color(0xFFC67C4E)),
                         ),
                       ),
                     ),

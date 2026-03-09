@@ -26,11 +26,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 122, 217, 168),
+      backgroundColor: const Color(0xFFFFDAB9),
 
       // One scaffold for the whole app shell
       appBar: AppBar(
-  backgroundColor: Colors.white,
+  backgroundColor: const Color(0xFFF7EFDD),
   elevation: 1, // subtle separation from green background
   centerTitle: true,
   title: Text(
@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? "Learn"
                 : "Account",
     style: const TextStyle(
-      color: Color.fromARGB(255, 20, 35, 28),
+      color: Color(0xFF3C3C3C),
       fontWeight: FontWeight.w700,
     ),
   ),
@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
       IconButton(
         icon: const Icon(
           Icons.logout,
-          color: Color.fromARGB(255, 20, 35, 28),
+          color: Color(0xFF3C3C3C),
         ),
         onPressed: _signOut,
       ),
@@ -82,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _index,
         onTap: (i) => setState(() => _index = i),
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color.fromARGB(255, 60, 120, 88),
+        selectedItemColor: const Color(0xFF3C3C3C),
         unselectedItemColor: Colors.black54,
         items: const [
           BottomNavigationBarItem(
@@ -129,7 +129,7 @@ class _AccountPage extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 60, 120, 88),
+              color: const Color(0xFF3C3C3C),
               borderRadius: BorderRadius.circular(18),
               boxShadow: const [
                 BoxShadow(
@@ -143,7 +143,7 @@ class _AccountPage extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 26,
-                  backgroundColor: Colors.white.withOpacity(0.25),
+                  backgroundColor: const Color(0xFFFFFDF0).withOpacity(0.25),
                   child: Text(
                     (email != null && email!.isNotEmpty)
                         ? email![0].toUpperCase()
@@ -181,8 +181,8 @@ class _AccountPage extends StatelessWidget {
             icon: const Icon(Icons.logout),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(double.infinity, 50),
-              backgroundColor: Colors.white,
-              foregroundColor: const Color.fromARGB(255, 60, 120, 88),
+              backgroundColor: const Color(0xFFF7EFDD),
+              foregroundColor: const Color(0xFF3C3C3C),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

@@ -5,9 +5,9 @@ class EducationScreen extends StatelessWidget {
   const EducationScreen({super.key});
 
   // Match the rest of your app
-  static const Color mintGreen = Color.fromARGB(255, 122, 217, 168);
-  static const Color cardGreen = Color.fromARGB(255, 60, 120, 88);
-  static const Color deepGreen = Color.fromARGB(255, 5, 68, 18);
+  static const Color mintGreen = Color(0xFFFFDAB9);
+  static const Color cardGreen = Color(0xFF3C3C3C);
+  static const Color deepGreen = Color(0xFF0707A);
 
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
@@ -162,7 +162,7 @@ class _SectionTitle extends StatelessWidget {
       child: Text(
         title.toUpperCase(),
         style: const TextStyle(
-          color: Color.fromARGB(255, 60, 120, 88),
+          color: Color(0xFFC67C4E),
           fontSize: 13,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.2,
@@ -411,7 +411,7 @@ class _InteractivePopulationVisualState
       borderRadius: BorderRadius.circular(18),
       child: Ink(
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 85, 145, 110),
+          color: const Color(0xFFFFF8F0),
           borderRadius: BorderRadius.circular(18),
           boxShadow: const [
             BoxShadow(
@@ -435,18 +435,18 @@ class _InteractivePopulationVisualState
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: List.generate(
                           10,
-                          (index) => Icon(
-                            Icons.person,
-                            color: index == 0 ? Colors.white : Colors.white54,
-                            size: 20,
-                          ),
+                        (index) => Icon(
+                          Icons.person,
+                          color: index == 0 ? const Color(0xFFC67C4E) : const Color(0xFFDDB5A0),
+                          size: 20,
+                        ),
                         ),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         "Global Ratio",
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: Color(0xFFC67C4E),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -455,7 +455,7 @@ class _InteractivePopulationVisualState
                         "430+ million people",
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Color(0xFF3C3C3C),
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),
@@ -464,12 +464,12 @@ class _InteractivePopulationVisualState
                       Text(
                         "require rehabilitation for disabling hearing loss.",
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white70),
+                        style: TextStyle(color: Color(0xFF8B6B5F)),
                       ),
                       SizedBox(height: 12),
                       Text(
                         "Tap again to hide",
-                        style: TextStyle(color: Colors.white54),
+                        style: TextStyle(color: Color(0xFFDDB5A0)),
                       ),
                     ],
                   )
@@ -494,14 +494,14 @@ class _InteractivePopulationVisualState
                           Text(
                             "Tap to reveal the global ratio",
                             style: TextStyle(
-                              color: Colors.white,
+                              color: Color(0xFF3C3C3C),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           SizedBox(width: 6),
                           Icon(
                             Icons.chevron_right,
-                            color: Colors.white70,
+                            color: Color(0xFFC67C4E),
                             size: 20,
                           ),
                         ],
