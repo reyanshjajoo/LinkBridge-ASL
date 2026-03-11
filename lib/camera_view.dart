@@ -1,59 +1,58 @@
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-
-typedef FrameCallback = void Function(CameraImage image);
+import 'package:camera/camera.dart';
 
 class CameraView extends StatefulWidget {
-  final FrameCallback onFrame;
 
-  const CameraView({Key? key, required this.onFrame}) : super(key: key);
+  final Function(CameraImage) onFrame;
+
+  const CameraView({super.key, required this.onFrame});
 
   @override
   State<CameraView> createState() => _CameraViewState();
 }
 
 class _CameraViewState extends State<CameraView> {
+
   CameraController? controller;
-  List<CameraDescription>? cameras;
 
   @override
   void initState() {
     super.initState();
-    initCamera();
+    startCamera();
   }
 
-  Future<void> initCamera() async {
-    cameras = await availableCameras();
+  Future startCamera() async {
+
+    final cameras = await availableCameras();
 
     controller = CameraController(
-      cameras![0],
+      cameras[0],
       ResolutionPreset.medium,
       enableAudio: false,
     );
 
     await controller!.initialize();
 
-    controller!.startImageStream((CameraImage image) {
+    controller!.startImageStream((image) {
       widget.onFrame(image);
     });
 
-    if (mounted) {
-      setState(() {});
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
+    if (controller == null || !controller!.value.isInitialized) {
+      return const Center(child: CircularProgressIndicator());
     }
+
+    return CameraPreview(controller!);
   }
 
   @override
   void dispose() {
     controller?.dispose();
     super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (controller == null || !controller!.value.isInitialized) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return CameraPreview(controller!);
   }
 }

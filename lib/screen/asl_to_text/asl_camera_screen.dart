@@ -15,44 +15,43 @@ class _ASLCameraScreenState extends State<ASLCameraScreen> {
 
   final GestureClassifier classifier = GestureClassifier();
 
-  String prediction = "Show a sign";
+  String detectedText = "";
 
-  bool isProcessing = false;
+  bool processing = false;
+  bool modelLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    classifier.loadModel();
+    load();
   }
 
-  Future<void> processFrame(CameraImage image) async {
+  Future load() async {
+    await classifier.loadModel();
+    modelLoaded = true;
+  }
 
-    if (isProcessing) return;
+  Future processFrame(CameraImage image) async {
 
-    isProcessing = true;
+    if (!modelLoaded) return;
+    if (processing) return;
+
+    processing = true;
 
     String result = await classifier.predict(image);
 
     setState(() {
-      prediction = result;
+      detectedText += result;
     });
 
-    isProcessing = false;
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
+    processing = false;
   }
 
   @override
   Widget build(BuildContext context) {
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("ASL Translator"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("ASL Translator")),
 
       body: Stack(
         children: [
@@ -61,28 +60,20 @@ class _ASLCameraScreenState extends State<ASLCameraScreen> {
 
           Positioned(
             bottom: 40,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-
-                child: Text(
-                  prediction,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
+            left: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.black54,
+              child: Text(
+                detectedText,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
                 ),
               ),
             ),
-          ),
-
+          )
         ],
       ),
     );
