@@ -55,7 +55,7 @@ class _CaptionReviewScreenState extends State<CaptionReviewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 122, 217, 168),
+      backgroundColor: const Color(0xFFFFDAB9),
       appBar: AppBar(
         title: const Text("Caption History"),
         actions: [

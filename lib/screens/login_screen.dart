@@ -8,7 +8,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
@@ -21,13 +21,13 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('How to use Login'),
+          title: const Text('How to use Sign In'),
           content: const Text(
-            '1. Enter the email you used when creating your account.\n'
-            '2. Type your password.\n'
-            '3. Tap “Login” to sign in.\n\n'
-            'If you do not have an account yet, tap “Create an Account” '
-            'to go to the sign up screen.',
+            '1. Enter the email address associated with your account.\n'
+            '2. Enter your password.\n'
+            '3. Tap "Sign In" to access your account.\n\n'
+            'If you don\'t have an account yet, tap "Sign Up" to create one. '
+            'If something goes wrong, an error message will appear under the fields.',
           ),
           actions: [
             TextButton(
@@ -40,8 +40,82 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  late AnimationController _logoController;
+  late Animation<double> _logoFadeAnimation;
+  late Animation<double> _logoScaleAnimation;
+
+  late AnimationController _formController;
+  late Animation<Offset> _formSlideAnimation;
+
+  late AnimationController _buttonController;
+  late Animation<double> _buttonScaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Logo animations
+    _logoController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _logoFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _logoController,
+      curve: Curves.easeOut,
+    ));
+
+    _logoScaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _logoController,
+      curve: Curves.elasticOut,
+    ));
+
+    // Form slide animation
+    _formController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _formSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _formController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    // Button scale animation
+    _buttonController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+
+    _buttonScaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _buttonController,
+      curve: Curves.easeInOut,
+    ));
+
+    // Start animations
+    _logoController.forward();
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _formController.forward();
+    });
+  }
+
   @override
   void dispose() {
+    _logoController.dispose();
+    _formController.dispose();
+    _buttonController.dispose();
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -98,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 122, 217, 168),
+      backgroundColor: const Color(0xFFFFDAB9),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -127,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 60, 120, 88),
+                  color: const Color(0xFF3C3C3C),
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: const [
                     BoxShadow(
@@ -142,130 +216,155 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Image.asset(
-                      'assets/logo.webp',
-                      height: 72,
-                      fit: BoxFit.contain,
+                    // Animated Logo
+                    FadeTransition(
+                      opacity: _logoFadeAnimation,
+                      child: ScaleTransition(
+                        scale: _logoScaleAnimation,
+                        child: Image.asset(
+                          'assets/logo.png',
+                          height: 180,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 12),
 
-                    const Text(
-                      "LinkBridge",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-
-                    const Text(
-                      "Sign in to continue",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70),
-                    ),
-
-                    const SizedBox(height: 22),
-
-                    TextField(
-                      controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.email],
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _fieldDecoration(
-                        label: "Email",
-                        icon: Icons.email_outlined,
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    TextField(
-                      controller: passwordController,
-                      obscureText: hidePassword,
-                      textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.password],
-                      onSubmitted: (_) {
-                        if (!isLoading) {
-                          handleLogin();
-                        }
-                      },
-
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _fieldDecoration(
-                        label: "Password",
-                        icon: Icons.lock_outline,
-                        suffixIcon: IconButton(
-                          onPressed: () =>
-                              setState(() => hidePassword = !hidePassword),
-                          icon: Icon(
-                            hidePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: Colors.white,
+                    // Animated Form Content
+                    SlideTransition(
+                      position: _formSlideAnimation,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            "LinkBridge",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
+                          const SizedBox(height: 6),
 
-                    if (errorMessage.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        errorMessage,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.redAccent),
-                      ),
-                    ],
+                          const Text(
+                            "Sign in to continue",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white70),
+                          ),
 
-                    const SizedBox(height: 18),
+                          const SizedBox(height: 22),
 
-                    ElevatedButton(
-                      onPressed: isLoading ? null : handleLogin,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
-                        backgroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.white70,
-                        foregroundColor: const Color.fromARGB(255, 60, 120, 88),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: isLoading
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color.fromARGB(255, 60, 120, 88),
+                          TextField(
+                            controller: emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            autofillHints: const [AutofillHints.email],
+                            style: const TextStyle(color: Colors.white),
+                            decoration: _fieldDecoration(
+                              label: "Email",
+                              icon: Icons.email_outlined,
+                            ),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          TextField(
+                            controller: passwordController,
+                            obscureText: hidePassword,
+                            textInputAction: TextInputAction.done,
+                            autofillHints: const [AutofillHints.password],
+                            onSubmitted: (_) {
+                              if (!isLoading) {
+                                handleLogin();
+                              }
+                            },
+
+                            style: const TextStyle(color: Colors.white),
+                            decoration: _fieldDecoration(
+                              label: "Password",
+                              icon: Icons.lock_outline,
+                              suffixIcon: IconButton(
+                                onPressed: () =>
+                                    setState(() => hidePassword = !hidePassword),
+                                icon: Icon(
+                                  hidePassword
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                  color: Colors.white,
                                 ),
                               ),
-                            )
-                          : const Text(
-                              "Login",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
+                            ),
+                          ),
+
+                          if (errorMessage.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              errorMessage,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.redAccent),
+                            ),
+                          ],
+
+                          const SizedBox(height: 18),
+
+                          GestureDetector(
+                            onTapDown: (_) => _buttonController.forward(),
+                            onTapUp: (_) => _buttonController.reverse(),
+                            onTapCancel: () => _buttonController.reverse(),
+                            child: ScaleTransition(
+                              scale: _buttonScaleAnimation,
+                              child: ElevatedButton(
+                                onPressed: isLoading ? null : handleLogin,
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 50),
+                                  backgroundColor: const Color(0xFFF7EFDD),
+                                  disabledBackgroundColor: const Color(0xFFEEE0C9),
+                                  foregroundColor: const Color(0xFF3C3C3C),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: isLoading
+                                    ? const SizedBox(
+                                        height: 18,
+                                        width: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: const AlwaysStoppedAnimation<Color>(
+                                            Color(0xFF3C3C3C),
+                                          ),
+                                        ),
+                                      )
+                                    : const Text(
+                                        "Login",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
                               ),
                             ),
-                    ),
+                          ),
 
-                    const SizedBox(height: 10),
+                          const SizedBox(height: 10),
 
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.pushNamed(context, "/register"),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text(
-                        "Create an Account",
-                        style: TextStyle(
-                          fontSize: 16,
-                          decoration: TextDecoration.underline,
-                        ),
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pushNamed(context, "/register"),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text(
+                              "Create an Account",
+                              style: TextStyle(
+                                fontSize: 16,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

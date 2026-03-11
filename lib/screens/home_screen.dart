@@ -1,5 +1,6 @@
 import 'package:asl_app/screens/group_captioning_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'translator_screen.dart';
@@ -13,8 +14,44 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _index = 0;
+
+  late AnimationController _navController;
+  late List<Animation<double>> _navAnimations;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _navController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    // Create staggered animations for nav items
+    _navAnimations = List.generate(4, (index) {
+      return Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _navController,
+        curve: Interval(
+          index * 0.1,
+          0.6 + index * 0.1,
+          curve: Curves.elasticOut,
+        ),
+      ));
+    });
+
+    _navController.forward();
+  }
+
+  @override
+  void dispose() {
+    _navController.dispose();
+    super.dispose();
+  }
 
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
@@ -41,76 +78,114 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _onNavTap(int index) {
+    setState(() => _index = index);
+    // Add haptic feedback or subtle animation here
+    HapticFeedback.lightImpact();
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 122, 217, 168),
+      backgroundColor: const Color(0xFFFFDAB9),
 
       // One scaffold for the whole app shell
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        centerTitle: true,
-        title: Text(
-          _index == 0
-              ? "ASL"
-              : _index == 1
-                  ? "Audio"
-                  : _index == 2
-                      ? "Learn"
-                      : _index == 3
-                          ? "Reader"
-                          : "Account",
-          style: const TextStyle(
-            color: Color.fromARGB(255, 20, 35, 28),
-            fontWeight: FontWeight.w700,
-          ),
+  backgroundColor: const Color(0xFFF7EFDD),
+  elevation: 1, // subtle separation from green background
+  centerTitle: true,
+  title: Text(
+    _index == 0
+        ? "Camera"
+        : _index == 1
+            ? "Audio"
+            : _index == 2
+                ? "Learn"
+                : _index == 3
+                ? "Reader"
+                : "Account",
+    style: const TextStyle(
+      color: Color(0xFF3C3C3C),
+      fontWeight: FontWeight.w700,
+    ),
+  ),
+  actions: [
+    if (_index == 3)
+      IconButton(
+        icon: const Icon(
+          Icons.logout,
+          color: Color(0xFF3C3C3C),
         ),
-        actions: [
-          if (_index == 4)
-            IconButton(
-              icon: const Icon(
-                Icons.logout,
-                color: Color.fromARGB(255, 20, 35, 28),
-              ),
-              onPressed: _signOut,
+        onPressed: _signOut,
+      ),
+  ],
+),
+
+
+      body: SafeArea(
+        child: IndexedStack(
+          index: _index,
+          children: [
+            // These screens should ideally NOT create their own Scaffold/AppBar.
+            // If they currently do, scroll down to the note below.
+            const TranslatorScreen(),
+            const GroupCaptioningScreen(),
+            const EducationScreen(),
+
+            // Account tab (simple, no card)
+            _AccountPage(
+              email: user?.email,
+              onSignOut: _signOut,
             ),
-        ],
+          ],
+        ),
       ),
 
-
-      body: SafeArea(child: _buildCurrentPage(user)),
-
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        onTap: (i) => setState(() => _index = i),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color.fromARGB(255, 60, 120, 88),
-        unselectedItemColor: Colors.black54,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.pan_tool_alt_outlined),
-            label: "ASL",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.mic_none_outlined),
-            label: "Audio",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.school_outlined),
-            label: "Learn",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.text_fields),
-            label: "Reader",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: "Account",
-          ),
-        ],
+      bottomNavigationBar: AnimatedBuilder(
+        animation: _navController,
+        builder: (context, child) {
+          return BottomNavigationBar(
+            currentIndex: _index,
+            onTap: _onNavTap,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: const Color(0xFF3C3C3C),
+            unselectedItemColor: Colors.black54,
+            backgroundColor: const Color(0xFFF7EFDD),
+            elevation: 8,
+            items: [
+              BottomNavigationBarItem(
+                icon: ScaleTransition(
+                  scale: _navAnimations[0],
+                  child: const Icon(Icons.pan_tool_alt_outlined),
+                ),
+                label: "Camera",
+              ),
+              BottomNavigationBarItem(
+                icon: ScaleTransition(
+                  scale: _navAnimations[1],
+                  child: const Icon(Icons.mic_none_outlined),
+                ),
+                label: "Audio",
+              ),
+              BottomNavigationBarItem(
+                icon: ScaleTransition(
+                  scale: _navAnimations[2],
+                  child: const Icon(Icons.school_outlined),
+                ),
+                label: "Learn",
+              ),
+              BottomNavigationBarItem(
+                icon: ScaleTransition(
+                  scale: _navAnimations[3],
+                  child: const Icon(Icons.person_outline),
+                ),
+                label: "Account",
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -138,7 +213,7 @@ class _AccountPage extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 60, 120, 88),
+              color: const Color(0xFF3C3C3C),
               borderRadius: BorderRadius.circular(18),
               boxShadow: const [
                 BoxShadow(
@@ -152,7 +227,7 @@ class _AccountPage extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 26,
-                  backgroundColor: Colors.white.withOpacity(0.25),
+                  backgroundColor: const Color(0xFFFFFDF0).withOpacity(0.25),
                   child: Text(
                     (email != null && email!.isNotEmpty)
                         ? email![0].toUpperCase()
@@ -190,8 +265,8 @@ class _AccountPage extends StatelessWidget {
             icon: const Icon(Icons.logout),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(double.infinity, 50),
-              backgroundColor: Colors.white,
-              foregroundColor: const Color.fromARGB(255, 60, 120, 88),
+              backgroundColor: const Color(0xFFF7EFDD),
+              foregroundColor: const Color(0xFF3C3C3C),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
