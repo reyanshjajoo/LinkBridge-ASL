@@ -102,9 +102,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         : _index == 1
             ? "Audio"
             : _index == 2
-                ? "Learn"
-                : _index == 3
                 ? "Reader"
+                : _index == 3
+                ? "Learn"
                 : "Account",
     style: const TextStyle(
       color: Color(0xFF3C3C3C),
@@ -132,8 +132,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             // If they currently do, scroll down to the note below.
             const TranslatorScreen(),
             const GroupCaptioningScreen(),
+            const TextReaderPage(),
             const EducationScreen(),
-
             // Account tab (simple, no card)
             _AccountPage(
               email: user?.email,
@@ -168,6 +168,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: const Icon(Icons.mic_none_outlined),
                 ),
                 label: "Audio",
+              ),
+              BottomNavigationBarItem(
+                icon: ScaleTransition(
+                  scale: _navAnimations[3],
+                  child: const Icon(Icons.text_fields),
+                ),
+                label: "Reader",
               ),
               BottomNavigationBarItem(
                 icon: ScaleTransition(
