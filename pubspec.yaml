@@ -47,6 +47,8 @@ dependencies:
   web_socket_channel: ^3.0.3
   http: ^1.6.0
   confetti: ^0.7.0
+  tflite_flutter: ^0.12.1
+  hand_landmarker: ^2.2.0
 
 
 dependency_overrides:

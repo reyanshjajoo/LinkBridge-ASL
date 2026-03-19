@@ -1,67 +1,82 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../screens/group_captioning_screen.dart';
+import '../models/chat_message.dart';
 
 class CaptionReviewService {
   static const String _baseUrl =
       'https://aslappserver.onrender.com'; // Update with your backend URL
 
-  // Save captions to backend
-  static Future<bool> saveCaptions(
+  // Retrieve full conversation and return chronological messages.
+  static Future<List<ChatMessage>> getConversationMessages(
     String conversationId,
-    List<Caption> captions,
   ) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/speech/save'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'conversation_id': conversationId,
-          'captions': captions.map((c) => c.toJson()).toList(),
-        }),
-      );
-
-      return response.statusCode == 200;
-    } catch (e) {
-      print('Error saving captions: $e');
-      return false;
-    }
-  }
-
-  // Retrieve saved captions
-  static Future<List<Caption>> getCaptions(String conversationId) async {
-    try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/speech/captions/$conversationId'),
+        Uri.parse('$_baseUrl/conversations/$conversationId'),
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List<dynamic> captionsJson = data['captions'] ?? [];
-        return captionsJson.map((json) => Caption.fromJson(json)).toList();
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final rawMessages = data['messages'];
+
+        if (rawMessages is! List) {
+          return [];
+        }
+
+        return rawMessages
+            .whereType<Map<String, dynamic>>()
+            .map(ChatMessage.fromJson)
+            .toList();
       }
     } catch (e) {
-      print('Error retrieving captions: $e');
+      print('Error retrieving conversation: $e');
     }
 
     return [];
   }
 
-  // Get list of all conversations for a user
-  static Future<List<Map<String, dynamic>>> getConversationList() async {
+  // Get list of all conversations.
+  static Future<List<Map<String, dynamic>>> getConversationList({
+    int limit = 20,
+  }) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/speech/conversations'),
+        Uri.parse(
+          '$_baseUrl/conversations',
+        ).replace(queryParameters: {'limit': '$limit'}),
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return List<Map<String, dynamic>>.from(data['conversations'] ?? []);
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final rawConversations = data['conversations'];
+        if (rawConversations is! List) {
+          return [];
+        }
+
+        return rawConversations
+            .whereType<Map<String, dynamic>>()
+            .map(_normalizeConversation)
+            .toList();
       }
     } catch (e) {
       print('Error retrieving conversation list: $e');
     }
 
     return [];
+  }
+
+  static Map<String, dynamic> _normalizeConversation(Map<String, dynamic> raw) {
+    final id = raw['conversation_id'] ?? raw['id'] ?? '';
+    final createdAt = raw['created_at'] ?? raw['timestamp'] ?? '';
+    final messageCount = raw['message_count'] ?? raw['caption_count'] ?? 0;
+    final title = raw['title'] ?? raw['name'] ?? 'Conversation $id';
+
+    return {
+      ...raw,
+      'id': id,
+      'title': title,
+      'created_at': createdAt,
+      'message_count': messageCount,
+    };
   }
 }

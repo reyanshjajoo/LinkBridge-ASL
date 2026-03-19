@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:flutter_tts/flutter_tts.dart'; // 1. Import TTS
+import 'package:permission_handler/permission_handler.dart';
 
 class TextReaderPage extends StatefulWidget {
   const TextReaderPage({super.key});
@@ -33,10 +34,26 @@ class _TextReaderPageState extends State<TextReaderPage> {
   }
 
   Future<void> _initCamera() async {
-    final cameras = await availableCameras();
-    _controller = CameraController(cameras[0], ResolutionPreset.medium, enableAudio: false);
-    await _controller!.initialize();
-    if (mounted) setState(() {});
+    final status = await Permission.camera.request();
+    if (!mounted) return;
+    if (!status.isGranted) {
+      setState(() => _recognizedText = "Camera permission denied.");
+      return;
+    }
+    try {
+      final cameras = await availableCameras();
+      _controller = CameraController(
+        cameras[0],
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
+      await _controller!.initialize();
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) {
+        setState(() => _recognizedText = "Camera init error: $e");
+      }
+    }
   }
 
   Future<void> _scanText() async {
