@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:flutter_tts/flutter_tts.dart'; // 1. Import TTS
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+/// Camera-based OCR reader that also speaks detected text aloud.
 class TextReaderPage extends StatefulWidget {
   const TextReaderPage({super.key});
 
@@ -14,7 +15,7 @@ class TextReaderPage extends StatefulWidget {
 class _TextReaderPageState extends State<TextReaderPage> {
   CameraController? _controller;
   final TextRecognizer _textRecognizer = TextRecognizer();
-  final FlutterTts _flutterTts = FlutterTts(); // 2. Initialize TTS
+  final FlutterTts _flutterTts = FlutterTts();
 
   String _recognizedText = "Point at the whiteboard and tap Scan";
   bool _isProcessing = false;
@@ -26,13 +27,19 @@ class _TextReaderPageState extends State<TextReaderPage> {
     _setupTts();
   }
 
-  // Configure the voice settings
+  /// Configures text-to-speech defaults for clear classroom-style playback.
+  ///
+  /// Returns when the TTS engine has accepted language and voice settings.
   Future<void> _setupTts() async {
     await _flutterTts.setLanguage("en-US");
     await _flutterTts.setPitch(1.0);
-    await _flutterTts.setSpeechRate(0.5); // Normal speaking speed
+    await _flutterTts.setSpeechRate(0.5);
   }
 
+  /// Requests camera permission and initializes the first available camera.
+  ///
+  /// On failure, updates [_recognizedText] so users get immediate, visible
+  /// feedback instead of a silent blank preview.
   Future<void> _initCamera() async {
     final status = await Permission.camera.request();
     if (!mounted) return;
@@ -56,6 +63,10 @@ class _TextReaderPageState extends State<TextReaderPage> {
     }
   }
 
+  /// Captures a frame, runs OCR, and optionally speaks detected text.
+  ///
+  /// Guard clauses prevent overlapping scans, which avoids race conditions and
+  /// repeated TTS playback when users tap quickly.
   Future<void> _scanText() async {
     if (_controller == null || _isProcessing) return;
 
@@ -74,7 +85,6 @@ class _TextReaderPageState extends State<TextReaderPage> {
           _recognizedText = "No text found.";
         } else {
           _recognizedText = recognizedText.text;
-          // 3. Speak the text aloud!
           _speak(_recognizedText);
         }
       });
@@ -85,6 +95,10 @@ class _TextReaderPageState extends State<TextReaderPage> {
     }
   }
 
+  /// Speaks the provided text if it is not empty.
+  ///
+  /// Parameter:
+  /// - [text]: OCR output to read aloud.
   Future<void> _speak(String text) async {
     if (text.isNotEmpty) {
       await _flutterTts.speak(text);
@@ -95,7 +109,8 @@ class _TextReaderPageState extends State<TextReaderPage> {
   void dispose() {
     _controller?.dispose();
     _textRecognizer.close();
-    _flutterTts.stop(); // 4. Stop speaking if user leaves page
+    // Prevent lingering audio when users navigate away mid-playback.
+    _flutterTts.stop();
     super.dispose();
   }
 

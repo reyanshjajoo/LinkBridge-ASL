@@ -6,19 +6,22 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 
+/// App entry point.
+///
+/// Ensures Flutter bindings and Firebase are ready before rendering UI.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // This MUST run before runApp()
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MyApp());
 }
 
+/// Root widget that defines global theme and named routes.
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
+  /// Builds the top-level [MaterialApp] used across the project.
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
