@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screens/group_captioning_screen.dart';
+import '../models/chat_message.dart';
 import '../services/caption_review_service.dart';
 
 class CaptionReviewScreen extends StatefulWidget {
@@ -123,7 +123,7 @@ class _CaptionReviewScreenState extends State<CaptionReviewScreen> {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
-                      '${conversation['caption_count'] ?? 0} messages • ${conversation['created_at'] ?? 'Unknown time'}',
+                      '${conversation['message_count'] ?? 0} messages • ${conversation['created_at'] ?? 'Unknown time'}',
                     ),
                     trailing: const Icon(Icons.arrow_forward_ios),
                     onTap: () => _viewConversation(
@@ -154,7 +154,7 @@ class ConversationDetailScreen extends StatefulWidget {
 }
 
 class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
-  List<Caption> _captions = [];
+  List<ChatMessage> _messages = [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -171,11 +171,11 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
     });
 
     try {
-      final captions = await CaptionReviewService.getCaptions(
+      final messages = await CaptionReviewService.getConversationMessages(
         widget.conversationId,
       );
       setState(() {
-        _captions = captions;
+        _messages = messages;
         _isLoading = false;
       });
     } catch (e) {
@@ -197,6 +197,18 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
 
     final hash = speaker.hashCode;
     return colors[hash.abs() % colors.length];
+  }
+
+  String _displaySpeaker(ChatMessage message) {
+    if (message.speaker != null && message.speaker!.trim().isNotEmpty) {
+      return message.speaker!;
+    }
+
+    if (message.type == ChatMessage.typeAsl) {
+      return 'ASL';
+    }
+
+    return 'Unknown';
   }
 
   @override
@@ -241,7 +253,7 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
                 ],
               ),
             )
-          : _captions.isEmpty
+          : _messages.isEmpty
           ? const Center(
               child: Text(
                 "No captions found for this conversation",
@@ -250,9 +262,10 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
             )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _captions.length,
+              itemCount: _messages.length,
               itemBuilder: (context, index) {
-                final caption = _captions[index];
+                final message = _messages[index];
+                final speakerName = _displaySpeaker(message);
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(16),
@@ -261,7 +274,7 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border(
                       left: BorderSide(
-                        color: _getSpeakerColor(caption.speaker),
+                        color: _getSpeakerColor(speakerName),
                         width: 4,
                       ),
                     ),
@@ -277,11 +290,11 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: _getSpeakerColor(caption.speaker),
+                              color: _getSpeakerColor(speakerName),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              caption.speaker,
+                              speakerName,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -291,7 +304,7 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
                           ),
                           const Spacer(),
                           Text(
-                            "${caption.receivedAt.hour.toString().padLeft(2, '0')}:${caption.receivedAt.minute.toString().padLeft(2, '0')}",
+                            "${message.createdAt.hour.toString().padLeft(2, '0')}:${message.createdAt.minute.toString().padLeft(2, '0')}",
                             style: const TextStyle(
                               color: Colors.white60,
                               fontSize: 12,
@@ -301,7 +314,7 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        caption.text,
+                        message.text,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,

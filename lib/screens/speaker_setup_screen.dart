@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../models/speaker_profile.dart';
+import '../services/conversation_service.dart';
 import 'speaker_identification_screen.dart';
 import 'group_captioning_screen.dart';
 
@@ -53,14 +54,20 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
 
     setState(() => _isConnecting = true);
 
-    final conversationId = 'conv_${DateTime.now().millisecondsSinceEpoch}';
-
     try {
-      final uri = Uri.parse(
-        'wss://aslappserver.onrender.com/speech/ws'
-        '?conversation_id=$conversationId&mode=identifying',
-      );
+      final conversationId = await ConversationService.instance
+          .getOrCreateConversation(forceNew: true, allowLocalFallback: true);
+      final uri = Uri.parse('wss://aslappserver.onrender.com/speech/ws')
+          .replace(
+            queryParameters: {
+              'conversation_id': conversationId,
+              'mode': 'identifying',
+              'num_speakers': '${profiles.length}',
+            },
+          );
       final channel = WebSocketChannel.connect(uri);
+      // Convert to broadcast stream so both screens can listen
+      final broadcastStream = channel.stream.asBroadcastStream();
 
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -70,6 +77,7 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
             profiles: profiles,
             conversationId: conversationId,
             channel: channel,
+            broadcastStream: broadcastStream,
           ),
         ),
       );
@@ -85,25 +93,45 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
     }
   }
 
-  void _skipIdentification() {
-    final conversationId = 'conv_${DateTime.now().millisecondsSinceEpoch}';
+  Future<void> _skipIdentification() async {
+    setState(() => _isConnecting = true);
 
-    final uri = Uri.parse(
-      'wss://aslappserver.onrender.com/speech/ws'
-      '?conversation_id=$conversationId&mode=captioning',
-    );
-    final channel = WebSocketChannel.connect(uri);
+    try {
+      final conversationId = await ConversationService.instance
+          .getOrCreateConversation(forceNew: true, allowLocalFallback: true);
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => GroupCaptioningScreen(
-          speakers: const [],
-          conversationId: conversationId,
-          channel: channel,
+      final uri = Uri.parse('wss://aslappserver.onrender.com/speech/ws')
+          .replace(
+            queryParameters: {
+              'conversation_id': conversationId,
+              'mode': 'captioning',
+            },
+          );
+      final channel = WebSocketChannel.connect(uri);
+      final broadcastStream = channel.stream.asBroadcastStream();
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => GroupCaptioningScreen(
+            speakers: const [],
+            conversationId: conversationId,
+            channel: channel,
+            broadcastStream: broadcastStream,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isConnecting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to start session: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -185,8 +213,10 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
                         ),
                         if (_controllers.length > 2)
                           IconButton(
-                            icon: const Icon(Icons.remove_circle_outline,
-                                color: Colors.red),
+                            icon: const Icon(
+                              Icons.remove_circle_outline,
+                              color: Colors.red,
+                            ),
                             onPressed: () => _removeField(index),
                           ),
                       ],
@@ -219,7 +249,9 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Icon(Icons.mic),
                 style: ElevatedButton.styleFrom(
@@ -231,14 +263,15 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
                   ),
                 ),
                 label: Text(
-                    _isConnecting ? 'Connecting...' : 'Start Identifying'),
+                  _isConnecting ? 'Connecting...' : 'Start Identifying',
+                ),
               ),
             ),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: _skipIdentification,
+                onPressed: _isConnecting ? null : _skipIdentification,
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 48),
                   foregroundColor: const Color(0xFF3C3C3C),

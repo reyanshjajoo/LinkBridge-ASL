@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:http/http.dart' as http;
@@ -14,12 +15,14 @@ class SpeakerIdentificationScreen extends StatefulWidget {
   final List<SpeakerProfile> profiles;
   final String conversationId;
   final WebSocketChannel channel;
+  final Stream broadcastStream;
 
   const SpeakerIdentificationScreen({
     super.key,
     required this.profiles,
     required this.conversationId,
     required this.channel,
+    required this.broadcastStream,
   });
 
   @override
@@ -33,26 +36,46 @@ class _SpeakerIdentificationScreenState
   int _currentIndex = 0;
   IdentificationState _state = IdentificationState.waiting;
   late StreamSubscription _wsSub;
+  bool _wsSubCancelled = false;
   StreamSubscription? _audioSub;
   Timer? _timeoutTimer;
+  int _chunkCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _wsSub = widget.channel.stream.listen(
+    _wsSub = widget.broadcastStream.listen(
       _handleMessage,
       onError: _handleError,
       onDone: _handleDone,
     );
+    _initializeIdentification();
+  }
+
+  Future<void> _initializeIdentification() async {
+    final status = await Permission.microphone.request();
+    if (!mounted) return;
+    if (!status.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Microphone permission is required for identification'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      setState(() => _state = IdentificationState.error);
+      return;
+    }
     _promptCurrentSpeaker();
   }
 
   void _handleMessage(dynamic raw) {
     final data = json.decode(raw);
     if (data['event'] == 'speaker_detected') {
+      debugPrint('[ID] speaker_detected: ${data['label']}');
       _onSpeakerDetected(data['label']);
     } else if (data['event'] == 'captioning_started') {
-      _navigateToCaptioning();
+      debugPrint('[ID] captioning_started received');
+      unawaited(_navigateToCaptioning());
     }
   }
 
@@ -87,13 +110,14 @@ class _SpeakerIdentificationScreenState
   }
 
   Future<void> _promptCurrentSpeaker() async {
+    _chunkCount = 0;
     setState(() => _state = IdentificationState.waiting);
     await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     setState(() => _state = IdentificationState.listening);
     await _startStreaming();
     _timeoutTimer?.cancel();
-    _timeoutTimer = Timer(const Duration(seconds: 8), _onTimeout);
+    _timeoutTimer = Timer(const Duration(seconds: 15), _onTimeout);
   }
 
   Future<void> _startStreaming() async {
@@ -106,14 +130,42 @@ class _SpeakerIdentificationScreenState
           numChannels: 1,
         ),
       );
-      _audioSub = stream.listen((chunk) {
-        widget.channel.sink.add(json.encode({
-          'event': 'audio_chunk',
-          'data': base64.encode(chunk),
-        }));
-      });
+      debugPrint('[ID] Microphone stream started');
+      _audioSub = stream.listen(
+        (chunk) {
+          if (chunk.isEmpty) return;
+          try {
+            widget.channel.sink.add(
+              json.encode({
+                'event': 'audio_chunk',
+                'data': base64.encode(chunk),
+              }),
+            );
+            _chunkCount++;
+            if (_chunkCount <= 5 || _chunkCount % 50 == 0) {
+              debugPrint(
+                '[ID] Sent audio chunk #$_chunkCount (${chunk.length} bytes)',
+              );
+            }
+          } catch (e) {
+            debugPrint('[ID] Failed sending audio chunk: $e');
+          }
+        },
+        onError: (error) {
+          debugPrint('[ID] Microphone stream error: $error');
+        },
+        onDone: () {
+          debugPrint('[ID] Microphone stream ended after $_chunkCount chunks');
+        },
+      );
     } catch (e) {
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to start microphone stream: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
       setState(() => _state = IdentificationState.error);
     }
   }
@@ -128,21 +180,31 @@ class _SpeakerIdentificationScreenState
   }
 
   void _onSpeakerDetected(String label) async {
-    await _stopStreaming();
+    // Don't stop streaming — keep audio flowing to maintain diarization context
+    _timeoutTimer?.cancel();
     if (!mounted) return;
     setState(() {
       widget.profiles[_currentIndex].speakerLabel = label;
       widget.profiles[_currentIndex].isConfirmed = true;
       _state = IdentificationState.detected;
     });
+    debugPrint('[ID] Speaker ${_currentIndex + 1} detected: $label');
 
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
     if (_currentIndex + 1 < widget.profiles.length) {
       setState(() => _currentIndex++);
-      _promptCurrentSpeaker();
+      // Audio is already streaming — just reset timeout for next speaker
+      _chunkCount = 0;
+      setState(() => _state = IdentificationState.waiting);
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return;
+      setState(() => _state = IdentificationState.listening);
+      _timeoutTimer?.cancel();
+      _timeoutTimer = Timer(const Duration(seconds: 15), _onTimeout);
     } else {
+      await _stopStreaming();
       _finishIdentification();
     }
   }
@@ -152,9 +214,7 @@ class _SpeakerIdentificationScreenState
     _registerSpeakers();
 
     // Request mode switch
-    widget.channel.sink.add(
-      json.encode({'event': 'begin_captioning'}),
-    );
+    widget.channel.sink.add(json.encode({'event': 'begin_captioning'}));
   }
 
   Future<void> _registerSpeakers() async {
@@ -175,8 +235,12 @@ class _SpeakerIdentificationScreenState
     }
   }
 
-  void _navigateToCaptioning() {
-    _wsSub.cancel();
+  Future<void> _navigateToCaptioning() async {
+    if (!_wsSubCancelled) {
+      _wsSubCancelled = true;
+      await _wsSub.cancel();
+    }
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -184,6 +248,7 @@ class _SpeakerIdentificationScreenState
           speakers: widget.profiles.where((p) => p.isConfirmed).toList(),
           conversationId: widget.conversationId,
           channel: widget.channel,
+          broadcastStream: widget.broadcastStream,
         ),
       ),
     );
@@ -193,6 +258,16 @@ class _SpeakerIdentificationScreenState
     if (_state != IdentificationState.listening) return;
     _stopStreaming();
     if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _chunkCount == 0
+              ? 'No microphone audio chunks were captured.'
+              : 'Audio sent ($_chunkCount chunks), but no speaker was detected.',
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
     setState(() => _state = IdentificationState.error);
   }
 
@@ -202,6 +277,8 @@ class _SpeakerIdentificationScreenState
 
   void _reidentifyAll() {
     _stopStreaming();
+    // Tell server to clear seen labels so re-identification works
+    widget.channel.sink.add(json.encode({'event': 'reset_identification'}));
     setState(() {
       _currentIndex = 0;
       for (final p in widget.profiles) {
@@ -216,7 +293,10 @@ class _SpeakerIdentificationScreenState
   void dispose() {
     _timeoutTimer?.cancel();
     _audioSub?.cancel();
-    _wsSub.cancel();
+    if (!_wsSubCancelled) {
+      _wsSubCancelled = true;
+      unawaited(_wsSub.cancel());
+    }
     _recorder.dispose();
     super.dispose();
   }
@@ -251,8 +331,9 @@ class _SpeakerIdentificationScreenState
             LinearProgressIndicator(
               value: progress,
               backgroundColor: const Color(0xFFDDB5A0),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(Color(0xFFC67C4E)),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFFC67C4E),
+              ),
               minHeight: 6,
               borderRadius: BorderRadius.circular(3),
             ),
@@ -349,11 +430,13 @@ class _SpeakerIdentificationScreenState
                 runSpacing: 8,
                 children: widget.profiles
                     .where((p) => p.isConfirmed)
-                    .map((p) => Chip(
-                          avatar: const Icon(Icons.check, size: 16),
-                          label: Text(p.name),
-                          backgroundColor: const Color(0xFFF7EFDD),
-                        ))
+                    .map(
+                      (p) => Chip(
+                        avatar: const Icon(Icons.check, size: 16),
+                        label: Text(p.name),
+                        backgroundColor: const Color(0xFFF7EFDD),
+                      ),
+                    )
                     .toList(),
               ),
             ],
@@ -384,11 +467,7 @@ class _SpeakerIdentificationScreenState
           shape: BoxShape.circle,
           color: const Color(0xFFC67C4E).withValues(alpha: 0.2),
         ),
-        child: const Icon(
-          Icons.mic,
-          size: 48,
-          color: Color(0xFFC67C4E),
-        ),
+        child: const Icon(Icons.mic, size: 48, color: Color(0xFFC67C4E)),
       ),
     );
   }
