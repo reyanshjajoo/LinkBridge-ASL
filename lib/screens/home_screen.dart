@@ -82,9 +82,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   centerTitle: true,
   title: Text(
     _index == 0
-        ? "ASL Camera Translator"
+        ? "Live Captions"
         : _index == 1
-            ? "Live Captions"
+            ? "Reader"
             : _index == 2
                 ? "Learn"
                 : "Account",
@@ -149,14 +149,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   scale: _navAnimations[0],
                   child: const Icon(Icons.mic_none_outlined),
                 ),
-                label: "ASL Camera Translator",
+                label: "Live Captions",
               ),
               BottomNavigationBarItem(
                 icon: ScaleTransition(
                   scale: _navAnimations[1],
                   child: const Icon(Icons.text_fields),
                 ),
-                label: "Live Captions",
+                label: "Reader",
               ),
               BottomNavigationBarItem(
                 icon: ScaleTransition(
