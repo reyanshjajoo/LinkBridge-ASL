@@ -21,17 +21,18 @@ class TextReaderPage extends StatefulWidget {
 }
 
 class _TextReaderPageState extends State<TextReaderPage> {
+  static const String _singleModePrompt = "Point at text and tap Scan";
+
   CameraController? _controller;
   final TextRecognizer _textRecognizer = TextRecognizer();
   final FlutterTts _flutterTts = FlutterTts();
 
-  String _recognizedText = "Point at the whiteboard and tap Scan";
+  String _recognizedText = _singleModePrompt;
   bool _isProcessing = false;
   bool _isInitializingCamera = true;
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
   double _tiltAngle = 0;
   bool _isTiltInRange = false;
-  bool _isTiltSimulationActive = false;
 
   @override
   void initState() {
@@ -169,9 +170,6 @@ class _TextReaderPageState extends State<TextReaderPage> {
     }
 
     _accelerometerSubscription = accelerometerEventStream().listen((event) {
-      if (_isTiltSimulationActive) {
-        return;
-      }
       final normalized = (event.z / 9.81).clamp(-1.0, 1.0);
       final angle = (math.asin(normalized) * 180 / math.pi);
       _applyTiltAngle(angle);
@@ -192,14 +190,6 @@ class _TextReaderPageState extends State<TextReaderPage> {
     if (inRange && !wasInRange) {
       HapticFeedback.mediumImpact();
     }
-  }
-
-  void _simulateTiltCorrection() {
-    _isTiltSimulationActive = true;
-    _applyTiltAngle(0);
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      _isTiltSimulationActive = false;
-    });
   }
 
   @override
@@ -235,7 +225,7 @@ class _TextReaderPageState extends State<TextReaderPage> {
               ),
             ),
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
               color: Colors.black,
               width: double.infinity,
               child: Column(
@@ -251,6 +241,10 @@ class _TextReaderPageState extends State<TextReaderPage> {
                     onPressed: _isProcessing ? null : _scanText,
                     icon: const Icon(Icons.document_scanner_outlined),
                     label: Text(_isProcessing ? "Processing..." : "SCAN"),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                 ],
               ),
@@ -260,57 +254,46 @@ class _TextReaderPageState extends State<TextReaderPage> {
       );
     }
 
+    final showOnTheGoStatus =
+        _recognizedText.isNotEmpty &&
+        _recognizedText != _singleModePrompt &&
+        _recognizedText != "Reading...";
+
     return Scaffold(
       body: Stack(
         children: [
           Positioned.fill(child: CameraPreview(_controller!)),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              color: Colors.black,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-              child: Text(
-                _recognizedText,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
+          if (showOnTheGoStatus)
+            Positioned(
+              top: 16,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  _recognizedText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
-          ),
           Center(
             child: _GyroArcIndicator(
               angle: _tiltAngle,
               inRange: _isTiltInRange,
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 170,
-            child: Center(
-              child: ElevatedButton.icon(
-                onPressed: _simulateTiltCorrection,
-                icon: const Icon(Icons.tune),
-                label: const Text("Simulate tilt correction"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black.withValues(alpha: 0.65),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-              ),
             ),
           ),
         ],

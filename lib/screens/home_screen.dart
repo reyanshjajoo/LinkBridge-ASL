@@ -79,7 +79,50 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final shouldFloatNav = _index == 1;
+    final shouldFloatNav =
+        _index == 1 && _readerMode == ReaderMode.onTheGo;
+
+    final navBar = BottomNavigationBar(
+      currentIndex: _index,
+      onTap: _onNavTap,
+      type: BottomNavigationBarType.fixed,
+      selectedItemColor: const Color(0xFF755C1B),
+      unselectedItemColor: Colors.black54,
+      backgroundColor: shouldFloatNav
+          ? Colors.transparent
+          : const Color(0xFFD7BE82),
+      elevation: shouldFloatNav ? 0 : 8,
+      items: [
+        BottomNavigationBarItem(
+          icon: ScaleTransition(
+            scale: _navAnimations[0],
+            child: const Icon(Icons.mic_none_outlined),
+          ),
+          label: "Live Captions",
+        ),
+        BottomNavigationBarItem(
+          icon: ScaleTransition(
+            scale: _navAnimations[1],
+            child: const Icon(Icons.text_fields),
+          ),
+          label: "Reader",
+        ),
+        BottomNavigationBarItem(
+          icon: ScaleTransition(
+            scale: _navAnimations[2],
+            child: const Icon(Icons.school_outlined),
+          ),
+          label: "Learn",
+        ),
+        BottomNavigationBarItem(
+          icon: ScaleTransition(
+            scale: _navAnimations[3],
+            child: const Icon(Icons.person_outline),
+          ),
+          label: "Account",
+        ),
+      ],
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFD7BE82), // Warm gold background
@@ -161,77 +204,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 onModeChanged: _setReaderMode,
               ),
             ),
-          Positioned(
-            left: shouldFloatNav ? 16 : 0,
-            right: shouldFloatNav ? 16 : 0,
-            bottom: shouldFloatNav ? 16 : 0,
-            child: AnimatedBuilder(
-              animation: _navController,
-              builder: (context, child) {
-                final navBar = BottomNavigationBar(
-                  currentIndex: _index,
-                  onTap: _onNavTap,
-                  type: BottomNavigationBarType.fixed,
-                  selectedItemColor: const Color(0xFF755C1B),
-                  unselectedItemColor: Colors.black54,
-                  backgroundColor: shouldFloatNav
-                      ? Colors.transparent
-                      : const Color(0xFFD7BE82),
-                  elevation: shouldFloatNav ? 0 : 8,
-                  items: [
-                    BottomNavigationBarItem(
-                      icon: ScaleTransition(
-                        scale: _navAnimations[0],
-                        child: const Icon(Icons.mic_none_outlined),
+          if (shouldFloatNav)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                minimum: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: AnimatedBuilder(
+                  animation: _navController,
+                  builder: (context, child) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD7BE82).withOpacity(0.75),
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          child: navBar,
+                        ),
                       ),
-                      label: "Live Captions",
-                    ),
-                    BottomNavigationBarItem(
-                      icon: ScaleTransition(
-                        scale: _navAnimations[1],
-                        child: const Icon(Icons.text_fields),
-                      ),
-                      label: "Reader",
-                    ),
-                    BottomNavigationBarItem(
-                      icon: ScaleTransition(
-                        scale: _navAnimations[2],
-                        child: const Icon(Icons.school_outlined),
-                      ),
-                      label: "Learn",
-                    ),
-                    BottomNavigationBarItem(
-                      icon: ScaleTransition(
-                        scale: _navAnimations[3],
-                        child: const Icon(Icons.person_outline),
-                      ),
-                      label: "Account",
-                    ),
-                  ],
-                );
-
-                if (!shouldFloatNav) {
-                  return navBar;
-                }
-
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(28),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD7BE82).withOpacity(0.75),
-                        borderRadius: BorderRadius.circular(28),
-                      ),
-                      child: navBar,
-                    ),
-                  ),
-                );
-              },
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
         ],
       ),
+      bottomNavigationBar: shouldFloatNav
+          ? null
+          : AnimatedBuilder(
+              animation: _navController,
+              builder: (context, child) => navBar,
+            ),
     );
   }
 }
