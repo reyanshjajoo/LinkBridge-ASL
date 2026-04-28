@@ -79,8 +79,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final shouldFloatNav =
-        _index == 1 && _readerMode == ReaderMode.onTheGo;
+    final shouldFloatNav = _index == 1 && _readerMode == ReaderMode.onTheGo;
+
+    final navElevation = shouldFloatNav ? 0.0 : (_index == 1 ? 0.0 : 8.0);
 
     final navBar = BottomNavigationBar(
       currentIndex: _index,
@@ -91,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       backgroundColor: shouldFloatNav
           ? Colors.transparent
           : const Color(0xFFD7BE82),
-      elevation: shouldFloatNav ? 0 : 8,
+      elevation: navElevation,
       items: [
         BottomNavigationBarItem(
           icon: ScaleTransition(
@@ -184,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: Text(
                 _readerMode == ReaderMode.single
                     ? "Point at text and tap Scan"
-                    : "Hold phone at a readable angle",
+                    : "",
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white,
@@ -204,17 +205,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 onModeChanged: _setReaderMode,
               ),
             ),
-          if (shouldFloatNav)
+          if (_index == 1)
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: SafeArea(
-                minimum: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: AnimatedBuilder(
-                  animation: _navController,
-                  builder: (context, child) {
-                    return ClipRRect(
+              child: AnimatedBuilder(
+                animation: _navController,
+                builder: (context, child) {
+                  if (!shouldFloatNav) {
+                    return Container(
+                      color: const Color(0xFFD7BE82),
+                      child: SafeArea(top: false, child: navBar),
+                    );
+                  }
+
+                  return SafeArea(
+                    minimum: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: ClipRRect(
                       borderRadius: BorderRadius.circular(28),
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -226,14 +234,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: navBar,
                         ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
             ),
         ],
       ),
-      bottomNavigationBar: shouldFloatNav
+      bottomNavigationBar: _index == 1
           ? null
           : AnimatedBuilder(
               animation: _navController,

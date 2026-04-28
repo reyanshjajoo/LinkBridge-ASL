@@ -21,18 +21,27 @@ class TextReaderPage extends StatefulWidget {
 }
 
 class _TextReaderPageState extends State<TextReaderPage> {
-  static const String _singleModePrompt = "Point at text and tap Scan";
+  static const double _topCaptionMaxHeight = 140;
+  static const Duration _tiltSampleInterval = Duration(milliseconds: 30);
+  static const Duration _inRangeMessageDuration = Duration(seconds: 2);
+  static const Duration _hiddenBadgeFadeDelay = Duration(seconds: 2);
 
   CameraController? _controller;
   final TextRecognizer _textRecognizer = TextRecognizer();
   final FlutterTts _flutterTts = FlutterTts();
 
-  String _recognizedText = _singleModePrompt;
+  String _recognizedText = "";
   bool _isProcessing = false;
   bool _isInitializingCamera = true;
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
+  DateTime? _lastTiltSampleAt;
   double _tiltAngle = 0;
   bool _isTiltInRange = false;
+  bool _showInRangeMessage = true;
+  bool _isGyroIndicatorEnabled = true;
+  Timer? _inRangeMessageTimer;
+  bool _isHiddenBadgeFaded = false;
+  Timer? _hiddenBadgeFadeTimer;
 
   @override
   void initState() {
@@ -164,12 +173,22 @@ class _TextReaderPageState extends State<TextReaderPage> {
         setState(() {
           _tiltAngle = 0;
           _isTiltInRange = false;
+          _showInRangeMessage = true;
         });
       }
+      _lastTiltSampleAt = null;
+      _inRangeMessageTimer?.cancel();
       return;
     }
 
     _accelerometerSubscription = accelerometerEventStream().listen((event) {
+      final now = DateTime.now();
+      if (_lastTiltSampleAt != null &&
+          now.difference(_lastTiltSampleAt!) < _tiltSampleInterval) {
+        return;
+      }
+      _lastTiltSampleAt = now;
+
       final normalized = (event.z / 9.81).clamp(-1.0, 1.0);
       final angle = (math.asin(normalized) * 180 / math.pi);
       _applyTiltAngle(angle);
@@ -177,8 +196,22 @@ class _TextReaderPageState extends State<TextReaderPage> {
   }
 
   void _applyTiltAngle(double angle) {
+    if (!_isGyroIndicatorEnabled) return;
+
     final wasInRange = _isTiltInRange;
     final inRange = angle >= -15 && angle <= 15;
+
+    if (!inRange && wasInRange) {
+      _inRangeMessageTimer?.cancel();
+      _showInRangeMessage = true;
+    } else if (inRange && !wasInRange) {
+      _inRangeMessageTimer?.cancel();
+      _showInRangeMessage = true;
+      _inRangeMessageTimer = Timer(_inRangeMessageDuration, () {
+        if (!mounted || !_isTiltInRange) return;
+        setState(() => _showInRangeMessage = false);
+      });
+    }
 
     if (mounted) {
       setState(() {
@@ -192,10 +225,31 @@ class _TextReaderPageState extends State<TextReaderPage> {
     }
   }
 
+  void _toggleGyroIndicator() {
+    _hiddenBadgeFadeTimer?.cancel();
+    setState(() {
+      _isGyroIndicatorEnabled = !_isGyroIndicatorEnabled;
+      if (_isGyroIndicatorEnabled) {
+        _showInRangeMessage = true;
+      } else {
+        _isHiddenBadgeFaded = false;
+      }
+    });
+
+    if (!_isGyroIndicatorEnabled) {
+      _hiddenBadgeFadeTimer = Timer(_hiddenBadgeFadeDelay, () {
+        if (!mounted || _isGyroIndicatorEnabled) return;
+        setState(() => _isHiddenBadgeFaded = true);
+      });
+    }
+  }
+
   @override
   void dispose() {
     _controller?.dispose();
     _accelerometerSubscription?.cancel();
+    _inRangeMessageTimer?.cancel();
+    _hiddenBadgeFadeTimer?.cancel();
     _textRecognizer.close();
     // Prevent lingering audio when users navigate away mid-playback.
     _flutterTts.stop();
@@ -211,32 +265,40 @@ class _TextReaderPageState extends State<TextReaderPage> {
     }
 
     if (widget.mode == ReaderMode.single) {
+      final hasSingleText = _recognizedText.trim().isNotEmpty;
       return Scaffold(
         body: Column(
           children: [
             Expanded(
-              child: Container(
-                color: Colors.black,
-                alignment: Alignment.center,
-                child: AspectRatio(
-                  aspectRatio: _previewAspectRatio(context),
-                  child: CameraPreview(_controller!),
-                ),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black,
+                      alignment: Alignment.center,
+                      child: AspectRatio(
+                        aspectRatio: _previewAspectRatio(context),
+                        child: CameraPreview(_controller!),
+                      ),
+                    ),
+                  ),
+                  if (hasSingleText)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: _TopCaptionZone(text: _recognizedText),
+                    ),
+                ],
               ),
             ),
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 180),
               color: Colors.black,
               width: double.infinity,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    _recognizedText,
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
                   ElevatedButton.icon(
                     onPressed: _isProcessing ? null : _scanText,
                     icon: const Icon(Icons.document_scanner_outlined),
@@ -255,9 +317,7 @@ class _TextReaderPageState extends State<TextReaderPage> {
     }
 
     final showOnTheGoStatus =
-        _recognizedText.isNotEmpty &&
-        _recognizedText != _singleModePrompt &&
-        _recognizedText != "Reading...";
+        _recognizedText.trim().isNotEmpty && _recognizedText != "Reading...";
 
     return Scaffold(
       body: Stack(
@@ -265,35 +325,23 @@ class _TextReaderPageState extends State<TextReaderPage> {
           Positioned.fill(child: CameraPreview(_controller!)),
           if (showOnTheGoStatus)
             Positioned(
-              top: 16,
-              left: 16,
-              right: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Text(
-                  _recognizedText,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+              top: 0,
+              left: 0,
+              right: 0,
+              child: _TopCaptionZone(text: _recognizedText),
             ),
           Center(
-            child: _GyroArcIndicator(
-              angle: _tiltAngle,
-              inRange: _isTiltInRange,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onDoubleTap: _toggleGyroIndicator,
+              onLongPress: _toggleGyroIndicator,
+              child: _GyroArcIndicator(
+                angle: _tiltAngle * -1,
+                inRange: _isTiltInRange,
+                showInRangeMessage: _showInRangeMessage,
+                isEnabled: _isGyroIndicatorEnabled,
+                isHiddenBadgeFaded: _isHiddenBadgeFaded,
+              ),
             ),
           ),
         ],
@@ -302,14 +350,76 @@ class _TextReaderPageState extends State<TextReaderPage> {
   }
 }
 
-class _GyroArcIndicator extends StatelessWidget {
-  const _GyroArcIndicator({required this.angle, required this.inRange});
+class _TopCaptionZone extends StatelessWidget {
+  const _TopCaptionZone({required this.text});
 
-  final double angle;
-  final bool inRange;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(
+        maxHeight: _TextReaderPageState._topCaptionMaxHeight,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.82),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+}
+
+class _GyroArcIndicator extends StatelessWidget {
+  const _GyroArcIndicator({
+    required this.angle,
+    required this.inRange,
+    required this.showInRangeMessage,
+    required this.isEnabled,
+    required this.isHiddenBadgeFaded,
+  });
+
+  final double angle;
+  final bool inRange;
+  final bool showInRangeMessage;
+  final bool isEnabled;
+  final bool isHiddenBadgeFaded;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isEnabled) {
+      return AnimatedOpacity(
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeOut,
+        opacity: isHiddenBadgeFaded ? 0.45 : 1,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: isHiddenBadgeFaded ? 0.32 : 0.65),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            "Gyro hidden (double tap or hold)",
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: isHiddenBadgeFaded ? 0.62 : 0.95),
+              fontSize: 13,
+              fontWeight: isHiddenBadgeFaded ? FontWeight.w500 : FontWeight.w700,
+            ),
+          ),
+        ),
+      );
+    }
+
     final color = inRange ? Colors.greenAccent : Colors.orangeAccent;
     final message = inRange
         ? "Great angle"
@@ -325,15 +435,16 @@ class _GyroArcIndicator extends StatelessWidget {
           painter: _ArcPainter(angle: angle, color: color),
         ),
         const SizedBox(height: 8),
-        Text(
-          "$message (${angle.toStringAsFixed(0)}°)",
-          style: TextStyle(
-            color: color,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            shadows: const [Shadow(color: Colors.black87, blurRadius: 6)],
+        if (!inRange || showInRangeMessage)
+          Text(
+            "$message (${angle.toStringAsFixed(0)}°)",
+            style: TextStyle(
+              color: color,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              shadows: const [Shadow(color: Colors.black87, blurRadius: 6)],
+            ),
           ),
-        ),
       ],
     );
   }
