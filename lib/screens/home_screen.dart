@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'asl_translator_screen.dart';
 import 'education_screen.dart';
 import 'text_reader_page.dart';
 
@@ -35,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
 
     // Stagger each nav icon so the bar feels responsive on first load.
-    _navAnimations = List.generate(4, (index) {
+    _navAnimations = List.generate(5, (index) {
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
           parent: _navController,
@@ -118,6 +119,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         BottomNavigationBarItem(
           icon: ScaleTransition(
             scale: _navAnimations[3],
+            child: const Icon(Icons.sign_language),
+          ),
+          label: "ASL",
+        ),
+        BottomNavigationBarItem(
+          icon: ScaleTransition(
+            scale: _navAnimations[4],
             child: const Icon(Icons.person_outline),
           ),
           label: "Account",
@@ -139,6 +147,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ? "Reader"
               : _index == 2
               ? "Learn"
+              : _index == 3
+              ? "ASL Translator"
               : "Account",
           style: const TextStyle(
             color: Colors.white,
@@ -158,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               tooltip: 'How this screen works',
               onPressed: () {},
             ),
-          if (_index == 3)
+          if (_index == 4)
             IconButton(
               icon: const Icon(Icons.logout, color: Colors.white),
               onPressed: _signOut,
@@ -172,8 +182,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             index: _index,
             children: [
               const GroupCaptioningScreen(),
-              TextReaderPage(mode: _readerMode),
+              _index == 1
+                  ? TextReaderPage(mode: _readerMode)
+                  : const SizedBox.shrink(),
               const EducationScreen(),
+              _index == 3
+                  ? const AslTranslatorScreen()
+                  : const SizedBox.shrink(),
               _AccountPage(email: user?.email, onSignOut: _signOut),
             ],
           ),

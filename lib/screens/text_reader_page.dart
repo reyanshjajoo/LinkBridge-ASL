@@ -22,7 +22,8 @@ class TextReaderPage extends StatefulWidget {
 
 class _TextReaderPageState extends State<TextReaderPage> {
   static const double _topCaptionMaxHeight = 140;
-  static const Duration _tiltSampleInterval = Duration(milliseconds: 30);
+  // smoothing alpha: how strongly new samples affect displayed tilt (0..1)
+  static const double _tiltSmoothingAlpha = 0.25;
   static const Duration _inRangeMessageDuration = Duration(seconds: 2);
   static const Duration _hiddenBadgeFadeDelay = Duration(seconds: 2);
 
@@ -34,7 +35,6 @@ class _TextReaderPageState extends State<TextReaderPage> {
   bool _isProcessing = false;
   bool _isInitializingCamera = true;
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
-  DateTime? _lastTiltSampleAt;
   double _tiltAngle = 0;
   bool _isTiltInRange = false;
   bool _showInRangeMessage = true;
@@ -86,8 +86,12 @@ class _TextReaderPageState extends State<TextReaderPage> {
     }
     try {
       final cameras = await availableCameras();
+      final selectedCamera = cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
       _controller = CameraController(
-        cameras[0],
+        selectedCamera,
         widget.mode == ReaderMode.single
             ? ResolutionPreset.high
             : ResolutionPreset.medium,
@@ -176,19 +180,13 @@ class _TextReaderPageState extends State<TextReaderPage> {
           _showInRangeMessage = true;
         });
       }
-      _lastTiltSampleAt = null;
       _inRangeMessageTimer?.cancel();
       return;
     }
 
+    // Listen at native rate and update immediately. Smoothing is applied
+    // inside _applyTiltAngle so the UI remains gentle.
     _accelerometerSubscription = accelerometerEventStream().listen((event) {
-      final now = DateTime.now();
-      if (_lastTiltSampleAt != null &&
-          now.difference(_lastTiltSampleAt!) < _tiltSampleInterval) {
-        return;
-      }
-      _lastTiltSampleAt = now;
-
       final normalized = (event.z / 9.81).clamp(-1.0, 1.0);
       final angle = (math.asin(normalized) * 180 / math.pi);
       _applyTiltAngle(angle);
@@ -198,8 +196,14 @@ class _TextReaderPageState extends State<TextReaderPage> {
   void _applyTiltAngle(double angle) {
     if (!_isGyroIndicatorEnabled) return;
 
+    // Apply a simple low-pass filter for smoothing so the marble moves
+    // gently instead of jittering.
+    final smoothed =
+        (_tiltAngle * (1 - _tiltSmoothingAlpha)) +
+        (angle * _tiltSmoothingAlpha);
+
     final wasInRange = _isTiltInRange;
-    final inRange = angle >= -15 && angle <= 15;
+    final inRange = smoothed >= -15 && smoothed <= 15;
 
     if (!inRange && wasInRange) {
       _inRangeMessageTimer?.cancel();
@@ -215,7 +219,7 @@ class _TextReaderPageState extends State<TextReaderPage> {
 
     if (mounted) {
       setState(() {
-        _tiltAngle = angle;
+        _tiltAngle = smoothed;
         _isTiltInRange = inRange;
       });
     }
@@ -361,9 +365,7 @@ class _TopCaptionZone extends StatelessWidget {
       constraints: const BoxConstraints(
         maxHeight: _TextReaderPageState._topCaptionMaxHeight,
       ),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.82),
-      ),
+      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.82)),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
         child: Text(
@@ -405,15 +407,21 @@ class _GyroArcIndicator extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: isHiddenBadgeFaded ? 0.32 : 0.65),
+            color: Colors.black.withValues(
+              alpha: isHiddenBadgeFaded ? 0.32 : 0.65,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             "Gyro hidden (double tap or hold)",
             style: TextStyle(
-              color: Colors.white.withValues(alpha: isHiddenBadgeFaded ? 0.62 : 0.95),
+              color: Colors.white.withValues(
+                alpha: isHiddenBadgeFaded ? 0.62 : 0.95,
+              ),
               fontSize: 13,
-              fontWeight: isHiddenBadgeFaded ? FontWeight.w500 : FontWeight.w700,
+              fontWeight: isHiddenBadgeFaded
+                  ? FontWeight.w500
+                  : FontWeight.w700,
             ),
           ),
         ),
@@ -437,7 +445,7 @@ class _GyroArcIndicator extends StatelessWidget {
         const SizedBox(height: 8),
         if (!inRange || showInRangeMessage)
           Text(
-            "$message (${angle.toStringAsFixed(0)}°)",
+            message,
             style: TextStyle(
               color: color,
               fontSize: 16,
