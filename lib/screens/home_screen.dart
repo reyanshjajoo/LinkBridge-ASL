@@ -100,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             scale: _navAnimations[0],
             child: const Icon(Icons.mic_none_outlined),
           ),
-          label: "Live Captions",
+          label: "Captions",
         ),
         BottomNavigationBarItem(
           icon: ScaleTransition(
@@ -112,16 +112,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         BottomNavigationBarItem(
           icon: ScaleTransition(
             scale: _navAnimations[2],
-            child: const Icon(Icons.school_outlined),
+            child: const Icon(Icons.sign_language),
           ),
-          label: "Learn",
+          label: "ASL",
         ),
         BottomNavigationBarItem(
           icon: ScaleTransition(
             scale: _navAnimations[3],
-            child: const Icon(Icons.sign_language),
+            child: const Icon(Icons.school_outlined),
           ),
-          label: "ASL",
+          label: "Learn",
         ),
         BottomNavigationBarItem(
           icon: ScaleTransition(
@@ -142,13 +142,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         centerTitle: true,
         title: Text(
           _index == 0
-              ? "Live Captions"
+              ? "Captions"
               : _index == 1
               ? "Reader"
               : _index == 2
-              ? "Learn"
-              : _index == 3
               ? "ASL Translator"
+              : _index == 3
+              ? "Learn"
               : "Account",
           style: const TextStyle(
             color: Colors.white,
@@ -185,10 +185,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               _index == 1
                   ? TextReaderPage(mode: _readerMode)
                   : const SizedBox.shrink(),
-              const EducationScreen(),
-              _index == 3
+              _index == 2
                   ? const AslTranslatorScreen()
                   : const SizedBox.shrink(),
+              const EducationScreen(),
               _AccountPage(email: user?.email, onSignOut: _signOut),
             ],
           ),
