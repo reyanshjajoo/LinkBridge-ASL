@@ -68,12 +68,12 @@ class _TextReaderPageState extends State<TextReaderPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.mode != widget.mode) {
       _log("mode changed ${oldWidget.mode.name} -> ${widget.mode.name}");
-      
+
       // Single mode should always be unmuted
       if (widget.mode == ReaderMode.single) {
         setState(() => _isMuted = false);
       }
-      
+
       _configureTiltStream();
       _restartCameraForMode();
     }
@@ -161,12 +161,39 @@ class _TextReaderPageState extends State<TextReaderPage> {
     await _initCamera();
   }
 
-  double _previewAspectRatio(BuildContext context) {
-    final controllerAspectRatio = _controller!.value.aspectRatio;
-    final isPortrait =
-        MediaQuery.of(context).orientation == Orientation.portrait;
-    // Camera reports landscape ratio on many devices; invert for portrait use.
-    return isPortrait ? (1 / controllerAspectRatio) : controllerAspectRatio;
+  Widget _buildCameraPreview() {
+    final controller = _controller!;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final previewSize = controller.value.previewSize;
+        if (previewSize == null) {
+          return const SizedBox.expand(child: ColoredBox(color: Colors.black));
+        }
+
+        // Match the ASL camera treatment: portrait center-crop from top to bottom.
+        final previewAspectRatio = previewSize.height / previewSize.width;
+        final screenAspectRatio = constraints.maxWidth / constraints.maxHeight;
+
+        final fittedWidth = screenAspectRatio > previewAspectRatio
+            ? constraints.maxWidth
+            : constraints.maxHeight * previewAspectRatio;
+        final fittedHeight = screenAspectRatio > previewAspectRatio
+            ? constraints.maxWidth / previewAspectRatio
+            : constraints.maxHeight;
+
+        return ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.center,
+            minWidth: 0,
+            minHeight: 0,
+            maxWidth: fittedWidth,
+            maxHeight: fittedHeight,
+            child: CameraPreview(controller),
+          ),
+        );
+      },
+    );
   }
 
   /// Captures a frame, runs OCR, and optionally speaks detected text.
@@ -257,12 +284,11 @@ class _TextReaderPageState extends State<TextReaderPage> {
     }
   }
 
-  void _startContinuousScanningIfNeeded({
-    Duration? initialDelay,
-  }) {
-    // On-the-go mode starts scanning immediately by default; 
+  void _startContinuousScanningIfNeeded({Duration? initialDelay}) {
+    // On-the-go mode starts scanning immediately by default;
     // pass explicit initialDelay to override
-    final delay = initialDelay ??
+    final delay =
+        initialDelay ??
         (widget.mode == ReaderMode.onTheGo
             ? Duration.zero
             : _continuousScanInterval);
@@ -570,49 +596,31 @@ class _TextReaderPageState extends State<TextReaderPage> {
 
     if (widget.mode == ReaderMode.single) {
       final hasSingleText = _recognizedText.trim().isNotEmpty;
+      final bottomPadding = MediaQuery.paddingOf(context).bottom + 24;
       return Scaffold(
-        body: Column(
+        body: Stack(
+          fit: StackFit.expand,
           children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Container(
-                      color: Colors.black,
-                      alignment: Alignment.center,
-                      child: AspectRatio(
-                        aspectRatio: _previewAspectRatio(context),
-                        child: CameraPreview(_controller!),
-                      ),
-                    ),
-                  ),
-                  if (hasSingleText)
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: _TopCaptionZone(text: _recognizedText),
-                    ),
-                ],
+            Positioned.fill(child: _buildCameraPreview()),
+            if (hasSingleText)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _TopCaptionZone(text: _recognizedText),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 180),
-              color: Colors.black,
-              width: double.infinity,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _isProcessing ? null : _scanText,
-                    icon: const Icon(Icons.document_scanner_outlined),
-                    label: Text(_isProcessing ? "Processing..." : "SCAN"),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ],
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: bottomPadding,
+              child: ElevatedButton.icon(
+                onPressed: _isProcessing ? null : _scanText,
+                icon: const Icon(Icons.document_scanner_outlined),
+                label: Text(_isProcessing ? "Processing..." : "SCAN"),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
             ),
           ],
@@ -622,11 +630,13 @@ class _TextReaderPageState extends State<TextReaderPage> {
 
     final showOnTheGoStatus =
         _recognizedText.trim().isNotEmpty && _recognizedText != "Reading...";
+    final bottomPadding = MediaQuery.paddingOf(context).bottom + 24;
 
     return Scaffold(
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          Positioned.fill(child: CameraPreview(_controller!)),
+          Positioned.fill(child: _buildCameraPreview()),
           if (showOnTheGoStatus)
             Positioned(
               top: 0,
