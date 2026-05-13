@@ -1,0 +1,14 @@
+{
+  "conversation_id": "conv_1680000000000",
+  "captions": [
+    {
+      "text": "Hello everyone",
+      "speaker": "Speaker 1",
+      "receivedAt": "2026-05-12T12:00:00.000Z",
+      "source": "speech"
+    }
+  ],
+  "speaker_map": {
+    "Speaker_1": "Alice"
+  }
+}

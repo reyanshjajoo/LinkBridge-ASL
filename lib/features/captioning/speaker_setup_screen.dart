@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-import '../models/speaker_profile.dart';
-import '../services/conversation_service.dart';
+import 'package:asl_app/constants/app_colors.dart';
+import 'package:asl_app/models/speaker_profile.dart';
+import 'package:asl_app/services/conversation_service.dart';
 import 'speaker_identification_screen.dart';
 import 'group_captioning_screen.dart';
 
@@ -145,11 +146,11 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFDAB9),
+      backgroundColor: AppColors.warmGold,
       appBar: AppBar(
         title: const Text('Speaker Setup'),
-        backgroundColor: const Color(0xFFF7EFDD),
-        foregroundColor: const Color(0xFF3C3C3C),
+        backgroundColor: AppColors.mutedSage,
+        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -161,13 +162,13 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF3C3C3C),
+                color: AppColors.textDark,
               ),
             ),
             const SizedBox(height: 8),
             const Text(
               'Enter the name of each speaker so captions show who said what.',
-              style: TextStyle(color: Color(0xFF8B6B5F), fontSize: 14),
+              style: TextStyle(color: AppColors.textMuted, fontSize: 14),
             ),
             const SizedBox(height: 20),
 
@@ -182,7 +183,7 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
                       children: [
                         CircleAvatar(
                           radius: 16,
-                          backgroundColor: const Color(0xFFC67C4E),
+                          backgroundColor: AppColors.accent,
                           child: Text(
                             '${index + 1}',
                             style: const TextStyle(
@@ -199,7 +200,7 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
                             decoration: InputDecoration(
                               hintText: 'Speaker ${index + 1} name',
                               filled: true,
-                              fillColor: const Color(0xFFFFF8F0),
+                              fillColor: AppColors.softSurface,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide.none,
@@ -230,10 +231,10 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
             if (_controllers.length < 6)
               TextButton.icon(
                 onPressed: _addField,
-                icon: const Icon(Icons.add, color: Color(0xFFC67C4E)),
+                icon: const Icon(Icons.add, color: AppColors.accent),
                 label: const Text(
                   'Add speaker',
-                  style: TextStyle(color: Color(0xFFC67C4E)),
+                  style: TextStyle(color: AppColors.accent),
                 ),
               ),
 
@@ -256,7 +257,7 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
                     : const Icon(Icons.mic),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 52),
-                  backgroundColor: const Color(0xFFC67C4E),
+                  backgroundColor: AppColors.accent,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -274,8 +275,8 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
                 onPressed: _isConnecting ? null : _skipIdentification,
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 48),
-                  foregroundColor: const Color(0xFF3C3C3C),
-                  side: const BorderSide(color: Color(0xFFC67C4E)),
+                  foregroundColor: AppColors.textDark,
+                  side: const BorderSide(color: AppColors.accent),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),

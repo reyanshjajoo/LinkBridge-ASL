@@ -6,7 +6,8 @@ import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:http/http.dart' as http;
 
-import '../models/speaker_profile.dart';
+import 'package:asl_app/constants/app_colors.dart';
+import 'package:asl_app/models/speaker_profile.dart';
 import 'group_captioning_screen.dart';
 
 enum IdentificationState { waiting, listening, detected, error }
@@ -322,18 +323,18 @@ class _SpeakerIdentificationScreenState
     final progress = (_currentIndex + 1) / widget.profiles.length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFDAB9),
+      backgroundColor: AppColors.warmGold,
       appBar: AppBar(
         title: const Text('Identify Speakers'),
-        backgroundColor: const Color(0xFFF7EFDD),
-        foregroundColor: const Color(0xFF3C3C3C),
+        backgroundColor: AppColors.mutedSage,
+        foregroundColor: Colors.white,
         actions: [
           if (_currentIndex > 0 || _state == IdentificationState.error)
             TextButton(
               onPressed: _reidentifyAll,
               child: const Text(
                 'Re-identify All',
-                style: TextStyle(color: Color(0xFFC67C4E)),
+                style: TextStyle(color: AppColors.accent),
               ),
             ),
         ],
@@ -345,17 +346,15 @@ class _SpeakerIdentificationScreenState
             // Progress bar
             LinearProgressIndicator(
               value: progress,
-              backgroundColor: const Color(0xFFDDB5A0),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFFC67C4E),
-              ),
+              backgroundColor: AppColors.accent.withValues(alpha: 0.2),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
               minHeight: 6,
               borderRadius: BorderRadius.circular(3),
             ),
             const SizedBox(height: 8),
             Text(
               'Speaker ${_currentIndex + 1} of ${widget.profiles.length}',
-              style: const TextStyle(color: Color(0xFF8B6B5F), fontSize: 13),
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
             ),
             const SizedBox(height: 40),
 
@@ -365,7 +364,7 @@ class _SpeakerIdentificationScreenState
               style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF3C3C3C),
+                color: AppColors.textDark,
               ),
             ),
             const SizedBox(height: 12),
@@ -374,13 +373,13 @@ class _SpeakerIdentificationScreenState
             if (_state == IdentificationState.waiting)
               const Text(
                 'Get ready...',
-                style: TextStyle(fontSize: 18, color: Color(0xFF8B6B5F)),
+                style: TextStyle(fontSize: 18, color: AppColors.textMuted),
               ),
 
             if (_state == IdentificationState.listening) ...[
               const Text(
                 'Please say something now',
-                style: TextStyle(fontSize: 18, color: Color(0xFFC67C4E)),
+                style: TextStyle(fontSize: 18, color: AppColors.accent),
               ),
               const SizedBox(height: 30),
               _buildPulsingMic(),
@@ -413,7 +412,7 @@ class _SpeakerIdentificationScreenState
                 onPressed: _retryCurrentSpeaker,
                 icon: const Icon(Icons.refresh),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFC67C4E),
+                  backgroundColor: AppColors.accent,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -427,7 +426,7 @@ class _SpeakerIdentificationScreenState
 
             // Confirmed speakers list
             if (_currentIndex > 0) ...[
-              const Divider(color: Color(0xFFDDB5A0)),
+              Divider(color: AppColors.accent.withValues(alpha: 0.2)),
               const SizedBox(height: 8),
               const Align(
                 alignment: Alignment.centerLeft,
@@ -435,7 +434,7 @@ class _SpeakerIdentificationScreenState
                   'Confirmed:',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF3C3C3C),
+                    color: AppColors.textDark,
                   ),
                 ),
               ),
@@ -449,7 +448,7 @@ class _SpeakerIdentificationScreenState
                       (p) => Chip(
                         avatar: const Icon(Icons.check, size: 16),
                         label: Text(p.name),
-                        backgroundColor: const Color(0xFFF7EFDD),
+                        backgroundColor: AppColors.softSurface,
                       ),
                     )
                     .toList(),
@@ -480,9 +479,9 @@ class _SpeakerIdentificationScreenState
         height: 100,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(0xFFC67C4E).withValues(alpha: 0.2),
+          color: AppColors.accent.withValues(alpha: 0.2),
         ),
-        child: const Icon(Icons.mic, size: 48, color: Color(0xFFC67C4E)),
+        child: const Icon(Icons.mic, size: 48, color: AppColors.accent),
       ),
     );
   }

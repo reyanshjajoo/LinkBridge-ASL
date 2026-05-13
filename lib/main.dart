@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'constants/app_theme.dart';
 
-import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
-import 'screens/home_screen.dart';
+import 'features/auth/login_screen.dart';
+import 'features/auth/register_screen.dart';
+import 'features/home/home_screen.dart';
 
 /// App entry point.
 ///
@@ -25,13 +26,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        textSelectionTheme: const TextSelectionThemeData(
-          cursorColor: Color(0xFF515A47),  // Sage green cursor
-          selectionColor: Color(0xFF7A4419),  // Rich brown selection
-          selectionHandleColor: Color(0xFF515A47),  // Sage green handles
-        ),
-      ),
+      theme: AppTheme.light,
 
       initialRoute: "/login",
       routes: {

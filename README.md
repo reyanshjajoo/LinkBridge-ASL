@@ -200,6 +200,20 @@ dart pub global activate flutterfire_cli
 flutterfire configure
 ```
 
+## Documentation
+
+Developer-facing documentation lives under the `docs/` folder. Key files:
+- `docs/api_contracts.md` — WebSocket/HTTP payload shapes and examples.
+- `docs/setup.md` — quick integration & run guide.
+- `docs/samples/` — JSON example payloads for testing.
+
+You can generate HTML API docs from DartDoc comments using:
+
+```bash
+dart doc
+```
+
+
 In Firebase Console, enable Email/Password under Authentication.
 
 ## Running the App

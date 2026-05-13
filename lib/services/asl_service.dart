@@ -52,12 +52,21 @@ class AslResult {
   }
 }
 
+/// Service responsible for uploading recorded videos to the ASL model server
+/// and returning structured prediction results.
+///
+/// Public API:
+/// - `transcribeVideo(File videoFile)` uploads `video` multipart/form-data to
+///   `POST $baseUrl/asl/transcribe` and returns an `AslResult` on success.
 class AslService {
   final String baseUrl;
   static const Duration _networkTimeout = Duration(seconds: 20);
 
   AslService({this.baseUrl = AppConfig.baseUrl});
 
+  /// Upload [videoFile] to the ASL server and return the parsed `AslResult`.
+  ///
+  /// Throws on network, timeout or server errors.
   Future<AslResult> transcribeVideo(File videoFile) async {
     final uri = Uri.parse('$baseUrl/asl/transcribe');
     final exists = await videoFile.exists();

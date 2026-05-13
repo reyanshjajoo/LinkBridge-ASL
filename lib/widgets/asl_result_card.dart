@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/asl_service.dart';
 
+/// Displays the top ASL prediction and secondary candidates returned by the
+/// `AslService`.
 class AslResultCard extends StatelessWidget {
+  /// The parsed result returned from `AslService.transcribeVideo`.
   final AslResult result;
 
   const AslResultCard({Key? key, required this.result}) : super(key: key);

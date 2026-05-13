@@ -1,0 +1,4 @@
+{
+  "event": "audio_chunk",
+  "data": "<base64_pcm_chunk_here>"
+}
