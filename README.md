@@ -31,11 +31,12 @@ LinkBridge is an all-in-one accessibility toolkit designed to help individuals e
 
 ## Current Product Scope (What Users See)
 
-After login, the Home screen exposes a persistent bottom navigation with 4 tabs:
+After login, the Home screen exposes a persistent bottom navigation with 5 tabs:
 1. **Audio** (Live Group Captioning)
 2. **Reader** (Smart Assistive OCR + TTS)
-3. **Learn** (Education and Trivia)
-4. **Account** (Account summary and Sign-out)
+3. **ASL** (Trained ASL Translator)
+4. **Learn** (Education and Trivia)
+5. **Account** (Account summary and Sign-out)
 
 *Note: ASL Translator is accessible via its respective flow within the application architecture.*
 
