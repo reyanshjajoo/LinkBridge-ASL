@@ -4,24 +4,26 @@ LinkBridge is a Flutter accessibility app focused on real-time communication sup
 
 ## Vision and Motivation
 
-LinkBridge is designed to support people who experience hearing or vision-related communication barriers in everyday life. The core goal is simple: help users stay independent, informed, and included in conversations and environments that often assume everyone can hear and see clearly.
+LinkBridge is an all-in-one accessibility toolkit designed to help individuals experiencing hearing or vision-related barriers to communication with accessible, easy-to-use methods of navigating everyday life. The main objective is to help users maintain their independence, receive needed information, and participate in all conversations and environments based upon the assumption that everyone can hear and see clearly. LinkBridge has been developed to combine several accessibility workflows in one location, which eliminates the need for users to switch between applications during typical daily activities. 
 
-The app combines multiple accessibility workflows in one place so users do not have to switch tools during daily tasks:
-1. Camera-based text recognition with spoken playback for reading signs, menus, and printed information.
-2. Live multi-speaker captioning for group conversations.
-3. Conversation history for reviewing previously captured speech captions.
+## Features: 
+**Smart Assistive Reader:** We built a camera-based OCR (Optical Character Recognition) system to help visually impaired users "read" signs, menus, and documents. To solve the problem of blurry or angled scans, the app uses real-time gyroscope and tilt data. It guides the user to level their phone perfectly before taking a scan, ensuring the text-to-speech output is accurate every time. This will allow users to achieve greater independence during their daily lives, especially when Braille or accessible signage are not readily available.
 
-The group captioning experience was shaped by a real-world need: tracking who is speaking in fast family or social conversations can be difficult even with hearing support devices. LinkBridge addresses that by labeling speakers and presenting readable, timestamped captions in real time.
+**Multi-Speaker Live Captioning:** Group conversations move fast, and for those using hearing aids or cochlear implants, it’s often impossible to tell who is speaking. LinkBridge captures live audio, labels individual speakers, and provides a timestamped transcript so users never lose the thread of a conversation.
 
-For users with visual impairments, the Reader mode converts visible text into speech on demand. This supports day-to-day independence in environments where Braille or accessible signage may not be available.
+**Conversation History:** All captions are saved locally, allowing users to go back and review important details from a lecture or a family meeting.
+Group captioning was specifically designed to meet a very common problem experienced by many individuals using hearing aid or cochlear implant technology. That problem is identifying who is talking in the midst of a fast-paced conversation in a family or social setting. LinkBridge solves this issue by allowing users to identify and label each speaker, and then present readable, timestamped captions in real-time.
 
-In short, LinkBridge is built to reduce communication friction, preserve important information, and make it easier for people to remain active participants in school, work, and family life.
+
+
+
 **Platform support (important):** This project currently targets mobile devices only — Android and iOS. Key reader and TTS features rely on native plugins and are not supported on web builds.
 
-At a high level, the app does three things well today:
+At a high level, the app does three things well:
 1. Handles authentication with Firebase (email + password).
 2. Runs live multi-speaker audio captioning through a WebSocket backend.
 3. Provides assistive reading (camera OCR + text-to-speech) and educational content.
+
 
 ## Current Product Scope (What Users See)
 
