@@ -1,18 +1,32 @@
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:asl_app/utils/app_config.dart';
 import '../models/chat_message.dart';
+import 'session_manager.dart';
 
 class CaptionReviewService {
-  static const String _baseUrl =
-      'https://aslappserver.onrender.com'; // Update with your backend URL
+  // Use `AppConfig.baseUrl` for runtime endpoints.
+
+  static Map<String, String> _accessorHeaders(String accessorId) => {
+    'X-User-Id': accessorId,
+    'X-Firebase-Uid': accessorId,
+    'X-Conversation-UUID': accessorId,
+  };
 
   // Retrieve full conversation and return chronological messages.
   static Future<List<ChatMessage>> getConversationMessages(
     String conversationId,
   ) async {
     try {
+      final conversationUuid = await SessionManager.instance
+          .getConversationUuid();
       final response = await http.get(
-        Uri.parse('$_baseUrl/conversations/$conversationId'),
+        AppConfig.httpUri(
+          '/conversations/$conversationId',
+        ).replace(queryParameters: {'conversation_uuid': conversationUuid}),
+        headers: _accessorHeaders(conversationUuid),
       );
 
       if (response.statusCode == 200) {
@@ -40,10 +54,15 @@ class CaptionReviewService {
     int limit = 20,
   }) async {
     try {
+      final conversationUuid = await SessionManager.instance
+          .getConversationUuid();
       final response = await http.get(
-        Uri.parse(
-          '$_baseUrl/conversations',
-        ).replace(queryParameters: {'limit': '$limit'}),
+        AppConfig.httpUri('/conversations').replace(
+          queryParameters: {
+            'limit': '$limit',
+            'conversation_uuid': conversationUuid,
+          },
+        ),
       );
 
       if (response.statusCode == 200) {
@@ -133,8 +152,13 @@ class CaptionReviewService {
     }
 
     try {
+      final conversationUuid = await SessionManager.instance
+          .getConversationUuid();
       final response = await http.get(
-        Uri.parse('$_baseUrl/conversations/$id/messages'),
+        AppConfig.httpUri(
+          '/conversations/$id/messages',
+        ).replace(queryParameters: {'conversation_uuid': conversationUuid}),
+        headers: _accessorHeaders(conversationUuid),
       );
       if (response.statusCode != 200) {
         return conversation;

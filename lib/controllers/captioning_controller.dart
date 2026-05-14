@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
@@ -8,9 +10,11 @@ import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:asl_app/utils/app_config.dart';
 
 import '../models/caption.dart';
 import '../models/speaker_profile.dart';
+import '../services/session_manager.dart';
 import '../services/speaker_label_mapper.dart';
 
 /// Controller that manages group captioning sessions.
@@ -24,9 +28,7 @@ import '../services/speaker_label_mapper.dart';
 /// - Finalizing a session by posting to the `/speech/finalize` endpoint.
 class CaptioningController extends ChangeNotifier {
   static const bool _verboseCaptionLogs = true;
-  static const String _wsUrl = 'wss://aslappserver.onrender.com/speech/ws';
-  static const String _finalizeUrl =
-      'https://aslappserver.onrender.com/speech/finalize';
+  // WebSocket and HTTP endpoints are derived from AppConfig.baseUrl
 
   final AudioRecorder _audioRecorder = AudioRecorder();
   final SpeakerLabelMapper _labelMapper = SpeakerLabelMapper();
@@ -45,6 +47,7 @@ class CaptioningController extends ChangeNotifier {
   bool _isEndingSession = false;
   bool _isDisposed = false;
   String _conversationId = '';
+  String _conversationUuid = '';
   String? _errorMessage;
   int? _genericSpeakerCount;
 
@@ -87,6 +90,13 @@ class CaptioningController extends ChangeNotifier {
       }
     }
 
+    try {
+      _conversationUuid = await SessionManager.instance.getConversationUuid();
+    } catch (e) {
+      _setError('Please sign in before starting captioning.');
+      return;
+    }
+
     if (hasPreconnectedChannel) {
       await _initializePreconnectedSession();
     } else {
@@ -103,19 +113,17 @@ class CaptioningController extends ChangeNotifier {
       final status = await Permission.microphone.request();
       _hasPermission = status == PermissionStatus.granted;
 
-
-  /// Start a captioning session.
-  ///
-  /// The `selectSpeakerCount` callback is invoked when named-speaker mode
-  /// is required and must return an integer number of speakers (or `null`
-  /// to cancel).
+      /// Start a captioning session.
+      ///
+      /// The `selectSpeakerCount` callback is invoked when named-speaker mode
+      /// is required and must return an integer number of speakers (or `null`
+      /// to cancel).
       if (!_hasPermission) {
         _setError('Microphone permission is required for group captioning');
         return false;
       }
 
-
-  /// End the current captioning session and finalize on the server.
+      /// End the current captioning session and finalize on the server.
       _notify();
       return true;
     } catch (e) {
@@ -202,16 +210,22 @@ class CaptioningController extends ChangeNotifier {
     _notify();
 
     try {
-      final uri = _buildWebSocketUri(_wsUrl, <String, String>{
-        'conversation_id': _conversationId,
-        if (_genericSpeakerCount != null)
-          'num_speakers': _genericSpeakerCount.toString(),
-      });
+      _conversationUuid = await SessionManager.instance.getConversationUuid();
+
+      final uri = _buildWebSocketUri(
+        AppConfig.wsUri('/speech/ws').toString(),
+        <String, String>{
+          'conversation_id': _conversationId,
+          'conversation_uuid': _conversationUuid,
+          if (_genericSpeakerCount != null)
+            'num_speakers': _genericSpeakerCount.toString(),
+        },
+      );
 
       if (_verboseCaptionLogs) {
         print('[WS] Connecting to: $uri');
         print(
-          '[WS] Connect params: conversation_id=$_conversationId num_speakers=$_genericSpeakerCount hasPreconnected=$hasPreconnectedChannel',
+          '[WS] Connect params: conversation_id=$_conversationId conversation_uuid=${SessionManager.instance.redact(_conversationUuid)} num_speakers=$_genericSpeakerCount hasPreconnected=$hasPreconnectedChannel',
         );
       }
 
@@ -277,7 +291,12 @@ class CaptioningController extends ChangeNotifier {
         print('[WS] Parsed event=$event keys=${data.keys.toList()}');
       }
 
-      if (data is Map<String, dynamic> && data['event'] == 'final_transcript') {
+      if (data is Map<String, dynamic> && _isConversationUuidRejection(data)) {
+        final message = _conversationUuidErrorMessage(data);
+        _setError(message);
+        unawaited(_terminateSession(errorMessage: message));
+      } else if (data is Map<String, dynamic> &&
+          data['event'] == 'final_transcript') {
         _finalTranscriptCount++;
         final rawSpeaker = data['speaker'] ?? 'Unknown';
         final displayName = _labelMapper.resolve(rawSpeaker);
@@ -308,7 +327,11 @@ class CaptioningController extends ChangeNotifier {
 
   void _handleWebSocketError(Object error) {
     print('[WS] Error: $error');
-    unawaited(_terminateSession(errorMessage: 'Connection error: $error'));
+    unawaited(
+      _terminateSession(
+        errorMessage: _friendlyConnectionError(error.toString()),
+      ),
+    );
   }
 
   void _handleWebSocketDone() {
@@ -367,7 +390,10 @@ class CaptioningController extends ChangeNotifier {
         if (_webSocketChannel != null && audioData.isNotEmpty) {
           final base64Audio = base64.encode(audioData);
           _webSocketChannel!.sink.add(
-            json.encode(<String, dynamic>{'event': 'audio_chunk', 'data': base64Audio}),
+            json.encode(<String, dynamic>{
+              'event': 'audio_chunk',
+              'data': base64Audio,
+            }),
           );
           _chunkCount++;
 
@@ -450,20 +476,24 @@ class CaptioningController extends ChangeNotifier {
 
   Future<void> _finalizeSession() async {
     try {
+      _conversationUuid = await SessionManager.instance.getConversationUuid();
+
       final response = await http
           .post(
-            Uri.parse(_finalizeUrl),
+            AppConfig.httpUri('/speech/finalize'),
             headers: <String, String>{'Content-Type': 'application/json'},
             body: json.encode(<String, dynamic>{
               'conversation_id': _conversationId,
-              'captions': _captions.map((Caption c) => c.toJson()).toList(),
-              'speaker_map': _labelMapper.registry,
+              'conversation_uuid': _conversationUuid,
             }),
           )
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         print('[Session] Finalize failed: ${response.statusCode}');
+        if (response.statusCode == 400 || response.statusCode == 403) {
+          _setError(_uuidHttpErrorMessage(response.statusCode));
+        }
       }
     } catch (e) {
       print('[Session] Error finalizing session: $e');
@@ -481,7 +511,9 @@ class CaptioningController extends ChangeNotifier {
     try {
       if (_webSocketChannel != null) {
         try {
-          _webSocketChannel!.sink.add(json.encode(<String, dynamic>{'event': 'end'}));
+          _webSocketChannel!.sink.add(
+            json.encode(<String, dynamic>{'event': 'end'}),
+          );
           print(
             '[Session] Sent end event. chunks_sent=$_chunkCount ws_rx=$_rxMessageCount transcripts=$_finalTranscriptCount non_transcript_events=$_nonTranscriptEventCount',
           );
@@ -508,6 +540,50 @@ class CaptioningController extends ChangeNotifier {
   void _setError(String message) {
     _errorMessage = message;
     _notify();
+  }
+
+  bool _isConversationUuidRejection(Map<String, dynamic> data) {
+    final event = data['event']?.toString().toLowerCase() ?? '';
+    final type = data['type']?.toString().toLowerCase() ?? '';
+    final message = '${data['message'] ?? ''} ${data['error'] ?? ''}'
+        .toLowerCase();
+    final status = int.tryParse(
+      '${data['status'] ?? data['status_code'] ?? ''}',
+    );
+
+    return status == 400 ||
+        status == 403 ||
+        ((event == 'error' || type == 'error') &&
+            (message.contains('conversation_uuid') ||
+                message.contains('uuid') ||
+                message.contains('forbidden')));
+  }
+
+  String _conversationUuidErrorMessage(Map<String, dynamic> data) {
+    final status = int.tryParse(
+      '${data['status'] ?? data['status_code'] ?? ''}',
+    );
+    return _uuidHttpErrorMessage(status);
+  }
+
+  String _friendlyConnectionError(String error) {
+    final lower = error.toLowerCase();
+    if (lower.contains('400') ||
+        lower.contains('403') ||
+        lower.contains('conversation_uuid') ||
+        lower.contains('uuid')) {
+      return _uuidHttpErrorMessage(lower.contains('403') ? 403 : 400);
+    }
+
+    return 'Connection error: $error';
+  }
+
+  String _uuidHttpErrorMessage(int? statusCode) {
+    if (statusCode == 403) {
+      return 'This account is not authorized for that conversation. Sign in with the correct account and try again.';
+    }
+
+    return 'This captioning request is missing or has an invalid account ID. Sign in again and retry.';
   }
 
   @override

@@ -1,6 +1,9 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:asl_app/utils/app_config.dart';
+
+import 'session_manager.dart';
 
 /// Coordinates conversation IDs between local state and the backend API.
 ///
@@ -9,11 +12,18 @@ class ConversationService {
   ConversationService._();
 
   static final ConversationService instance = ConversationService._();
-  static const String _baseUrl = 'https://aslappserver.onrender.com';
+  // Use AppConfig.baseUrl for all runtime endpoints.
 
   String? _activeConversationId;
+  String? _activeAccessorId;
 
   String? get activeConversationId => _activeConversationId;
+
+  Map<String, String> _accessorHeaders(String accessorId) => {
+    'X-User-Id': accessorId,
+    'X-Firebase-Uid': accessorId,
+    'X-Conversation-UUID': accessorId,
+  };
 
   /// Marks a conversation ID as the active session for subsequent calls.
   ///
@@ -26,6 +36,7 @@ class ConversationService {
   /// Clears the currently active conversation from local state.
   void clearActiveConversationId() {
     _activeConversationId = null;
+    _activeAccessorId = null;
   }
 
   /// Creates a local fallback conversation ID when the API is unavailable.
@@ -45,12 +56,14 @@ class ConversationService {
   /// Returns the created conversation ID.
   /// Throws an [Exception] when the API response is invalid.
   Future<String> createConversation({String? customId}) async {
+    final conversationUuid = await SessionManager.instance
+        .getConversationUuid();
     final body = customId == null
-        ? <String, dynamic>{}
-        : {'conversation_id': customId};
+        ? <String, dynamic>{'conversation_uuid': conversationUuid}
+        : {'conversation_id': customId, 'conversation_uuid': conversationUuid};
 
     final resp = await http.post(
-      Uri.parse('$_baseUrl/conversations'),
+      AppConfig.httpUri('/conversations'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(body),
     );
@@ -66,6 +79,7 @@ class ConversationService {
     }
 
     _activeConversationId = id;
+    _activeAccessorId = conversationUuid;
     return id;
   }
 
@@ -80,9 +94,12 @@ class ConversationService {
     bool forceNew = false,
     bool allowLocalFallback = false,
   }) async {
+    final conversationUuid = await SessionManager.instance
+        .getConversationUuid();
     if (!forceNew &&
         _activeConversationId != null &&
-        _activeConversationId!.isNotEmpty) {
+        _activeConversationId!.isNotEmpty &&
+        _activeAccessorId == conversationUuid) {
       return _activeConversationId!;
     }
 
@@ -92,7 +109,9 @@ class ConversationService {
       if (!allowLocalFallback) {
         rethrow;
       }
-      return createLocalConversationId();
+      final id = createLocalConversationId();
+      _activeAccessorId = conversationUuid;
+      return id;
     }
   }
 
@@ -103,10 +122,15 @@ class ConversationService {
   ///
   /// Throws an [Exception] if the finalize request fails.
   Future<void> finalizeConversation(String conversationId) async {
+    final conversationUuid = await SessionManager.instance
+        .getConversationUuid();
     final resp = await http.post(
-      Uri.parse('$_baseUrl/speech/finalize'),
+      AppConfig.httpUri('/speech/finalize'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'conversation_id': conversationId}),
+      body: jsonEncode({
+        'conversation_id': conversationId,
+        'conversation_uuid': conversationUuid,
+      }),
     );
 
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
@@ -121,7 +145,14 @@ class ConversationService {
   ///
   /// Returns a decoded JSON map for that conversation.
   Future<Map<String, dynamic>> fetchConversation(String id) async {
-    final resp = await http.get(Uri.parse('$_baseUrl/conversations/$id'));
+    final conversationUuid = await SessionManager.instance
+        .getConversationUuid();
+    final resp = await http.get(
+      AppConfig.httpUri(
+        '/conversations/$id',
+      ).replace(queryParameters: {'conversation_uuid': conversationUuid}),
+      headers: _accessorHeaders(conversationUuid),
+    );
     if (resp.statusCode == 200) {
       return jsonDecode(resp.body) as Map<String, dynamic>;
     }
@@ -137,10 +168,15 @@ class ConversationService {
   /// Returns a list of conversation maps. Invalid payloads return an empty list
   /// to keep the history view resilient to schema drift.
   Future<List<Map<String, dynamic>>> listConversations({int limit = 20}) async {
+    final conversationUuid = await SessionManager.instance
+        .getConversationUuid();
     final resp = await http.get(
-      Uri.parse(
-        '$_baseUrl/conversations',
-      ).replace(queryParameters: {'limit': '$limit'}),
+      AppConfig.httpUri('/conversations').replace(
+        queryParameters: {
+          'limit': '$limit',
+          'conversation_uuid': conversationUuid,
+        },
+      ),
     );
 
     if (resp.statusCode != 200) {

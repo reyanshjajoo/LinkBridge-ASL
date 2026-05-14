@@ -10,10 +10,10 @@ Main screens
 - `caption_review_screen.dart` — review and finalize captions
 
 Important flows
-- WebSocket stream to `wss://aslappserver.onrender.com/speech/ws`.
+- WebSocket stream to `AppConfig.wsUri('/speech/ws')`.
 - Send `audio_chunk` events with base64 PCM16 audio.
 - Receive `final_transcript` events and append to captions.
-- Call `POST /speech/finalize` with conversation payload when session ends.
+- Call `AppConfig.httpUri('/speech/finalize')` with the conversation payload when session ends.
 
 Permissions
 - `microphone` permission is required at runtime.

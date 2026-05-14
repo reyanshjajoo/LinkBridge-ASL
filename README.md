@@ -101,7 +101,7 @@ Primary files:
 
 How it works:
 1. A conversation ID is created via `ConversationService` (`/conversations`) or generated locally if fallback is allowed.
-2. The app connects to `wss://aslappserver.onrender.com/speech/ws`.
+2. The app connects through `AppConfig.wsUri('/speech/ws')`.
 3. Microphone PCM16 chunks are streamed as base64 `audio_chunk` events.
 4. Incoming `final_transcript` events are appended to in-memory captions.
 5. On session end, the app sends an `end` event, stops recording, closes the socket, and calls `/speech/finalize`.
@@ -138,10 +138,10 @@ Behavior:
 ## Backend Contract Used by the App
 
 Configured host:
-1. `https://aslappserver.onrender.com`
+1. `AppConfig.baseUrl`
 
 Endpoints currently referenced in Flutter code:
-1. `wss://aslappserver.onrender.com/speech/ws`
+1. `AppConfig.wsUri('/speech/ws')`
 2. `POST /conversations`
 3. `GET /conversations`
 4. `GET /conversations/{id}`
@@ -158,8 +158,8 @@ Why this exists:
 3. The backend acts as a protocol middle layer: app WebSocket in, diarization/transcription pipeline out.
 
 Server deployment and source:
-1. Deployment: `https://aslappserver.onrender.com`
-2. Health check: `https://aslappserver.onrender.com/health`
+1. Deployment host: `AppConfig.baseUrl`
+2. Health check: `AppConfig.httpUri('/health')`
 3. Server repository: `https://github.com/MINTALLOYY/ASLAppServer`
 
 Cold-start behavior (Render):

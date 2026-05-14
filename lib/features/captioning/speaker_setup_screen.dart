@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:asl_app/utils/app_config.dart';
 
 import 'package:asl_app/constants/app_colors.dart';
 import 'package:asl_app/models/speaker_profile.dart';
 import 'package:asl_app/services/conversation_service.dart';
+import 'package:asl_app/services/session_manager.dart';
 import 'speaker_identification_screen.dart';
 import 'group_captioning_screen.dart';
 
@@ -56,16 +58,18 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
     setState(() => _isConnecting = true);
 
     try {
+      final conversationUuid = await SessionManager.instance
+          .getConversationUuid();
       final conversationId = await ConversationService.instance
           .getOrCreateConversation(forceNew: true, allowLocalFallback: true);
-      final uri = Uri.parse('wss://aslappserver.onrender.com/speech/ws')
-          .replace(
-            queryParameters: {
-              'conversation_id': conversationId,
-              'mode': 'identifying',
-              'num_speakers': '${profiles.length}',
-            },
-          );
+      final uri = AppConfig.wsUri('/speech/ws').replace(
+        queryParameters: {
+          'conversation_id': conversationId,
+          'conversation_uuid': conversationUuid,
+          'mode': 'identifying',
+          'num_speakers': '${profiles.length}',
+        },
+      );
       final channel = WebSocketChannel.connect(uri);
       // Convert to broadcast stream so both screens can listen
       final broadcastStream = channel.stream.asBroadcastStream();
@@ -98,16 +102,18 @@ class _SpeakerSetupScreenState extends State<SpeakerSetupScreen> {
     setState(() => _isConnecting = true);
 
     try {
+      final conversationUuid = await SessionManager.instance
+          .getConversationUuid();
       final conversationId = await ConversationService.instance
           .getOrCreateConversation(forceNew: true, allowLocalFallback: true);
 
-      final uri = Uri.parse('wss://aslappserver.onrender.com/speech/ws')
-          .replace(
-            queryParameters: {
-              'conversation_id': conversationId,
-              'mode': 'captioning',
-            },
-          );
+      final uri = AppConfig.wsUri('/speech/ws').replace(
+        queryParameters: {
+          'conversation_id': conversationId,
+          'conversation_uuid': conversationUuid,
+          'mode': 'captioning',
+        },
+      );
       final channel = WebSocketChannel.connect(uri);
       final broadcastStream = channel.stream.asBroadcastStream();
 

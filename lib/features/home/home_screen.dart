@@ -153,7 +153,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             IconButton(
               icon: const Icon(Icons.help_outline, color: Colors.white),
               tooltip: 'How this screen works',
-              onPressed: () {},
+              onPressed: _showReaderHelp,
+            ),
+          if (_index == 2)
+            IconButton(
+              icon: const Icon(Icons.help_outline, color: Colors.white),
+              tooltip: 'How this screen works',
+              onPressed: _showAslTranslatorHelp,
             ),
           if (_index == 4)
             IconButton(
@@ -212,6 +218,50 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         animation: _navController,
         builder: (context, child) => navBar,
       ),
+    );
+  }
+
+  void _showAslTranslatorHelp() {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('ASL Translator'),
+          content: const SingleChildScrollView(
+            child: Text(
+              'This feature records a short video of a signed word, sends it to the translation service, and shows the most likely result.\n\nHow to use:\n- Hold RECORD to start recording.\n- Sign one clear word in front of the camera.\n- Release RECORD to stop, or wait for the 4 second timer.\n- Wait for processing, then review the prediction and tap Speak if you want it read aloud.',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Got it'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showReaderHelp() {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Reader'),
+          content: const SingleChildScrollView(
+            child: Text(
+              'This screen uses the camera to read text from signs, labels, or pages.\n\nHow to use:\n- In Single mode, point the camera at text and tap Scan.\n- In On-the-Go mode, the app scans automatically and can read text aloud.\n- Use the mute button to stop spoken output.\n- Tap the mode switcher to change between manual and automatic scanning.',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Got it'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

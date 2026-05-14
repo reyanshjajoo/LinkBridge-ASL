@@ -4,7 +4,7 @@ This document summarizes the API contracts (HTTP + WebSocket) that the app relie
 
 ## WebSocket: Live captioning
 
-- URL: `wss://aslappserver.onrender.com/speech/ws`
+- URL: `AppConfig.wsUri('/speech/ws')`
 - Query parameters:
   - `conversation_id` (string): required to associate messages with a conversation.
   - `num_speakers` (int, optional): if present, backend will expect named-speaker mode.
@@ -40,7 +40,7 @@ This document summarizes the API contracts (HTTP + WebSocket) that the app relie
 
 ## HTTP: Finalize session
 
-- Endpoint: `POST https://aslappserver.onrender.com/speech/finalize`
+- Endpoint: `POST AppConfig.httpUri('/speech/finalize')`
 - Purpose: send the finalized conversation/payload after `end` event and close.
 
 ### Request body (example)
@@ -62,7 +62,7 @@ This document summarizes the API contracts (HTTP + WebSocket) that the app relie
 
 ## HTTP: ASL transcription (video)
 
-- Endpoint: `POST {baseUrl}/asl/transcribe`
+- Endpoint: `POST AppConfig.httpUri('/asl/transcribe')`
 - Form field: multipart `video` file
 - Response: JSON containing:
   - `text`: overall textual description

@@ -19,7 +19,7 @@ flutter pub get
 - Recommended: use `flutterfire configure` to generate `firebase_options.dart`.
 
 4. Backend endpoints:
-- Ensure the backend at `https://aslappserver.onrender.com` is reachable for captioning.
+- Ensure the backend host in `AppConfig.baseUrl` is reachable for captioning.
 - If testing locally, adjust `AppConfig.baseUrl`.
 
 5. Generating API docs (optional):
@@ -37,7 +37,7 @@ flutter run
 ```
 
 Troubleshooting
-- If WebSocket connection fails, check network, CORS, and backend health endpoint `https://aslappserver.onrender.com/health`.
+- If WebSocket connection fails, check network, CORS, and backend health endpoint `AppConfig.httpUri('/health')`.
 - The ASL server may be slow or sleeping — warm it up with a GET health check before running captioning.
 
 Platform notes

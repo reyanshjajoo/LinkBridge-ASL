@@ -6,6 +6,7 @@ import 'constants/app_theme.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/home/home_screen.dart';
+import 'services/session_manager.dart';
 
 /// App entry point.
 ///
@@ -13,6 +14,7 @@ import 'features/home/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await SessionManager.instance.initialize();
 
   runApp(const MyApp());
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:asl_app/utils/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
@@ -8,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 import 'package:asl_app/constants/app_colors.dart';
 import 'package:asl_app/models/speaker_profile.dart';
+import 'package:asl_app/services/session_manager.dart';
 import 'group_captioning_screen.dart';
 
 enum IdentificationState { waiting, listening, detected, error }
@@ -227,7 +229,7 @@ class _SpeakerIdentificationScreenState
 
   Future<void> _finishIdentification() async {
     // Register speakers with server (fire-and-forget)
-    _registerSpeakers();
+    await _registerSpeakers();
 
     // Request mode switch
     widget.channel.sink.add(json.encode({'event': 'begin_captioning'}));
@@ -235,17 +237,26 @@ class _SpeakerIdentificationScreenState
 
   Future<void> _registerSpeakers() async {
     try {
-      await http.post(
-        Uri.parse('https://aslappserver.onrender.com/speech/register_speakers'),
+      final conversationUuid = await SessionManager.instance
+          .getConversationUuid();
+      final response = await http.post(
+        AppConfig.httpUri('/speech/register_speakers'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'conversation_id': widget.conversationId,
+          'conversation_uuid': conversationUuid,
           'speakers': widget.profiles
               .where((p) => p.isConfirmed)
               .map((p) => p.toJson())
               .toList(),
         }),
       );
+      if ((response.statusCode == 400 || response.statusCode == 403) &&
+          mounted) {
+        _showErrorDialog(
+          'This speaker session is missing or has an invalid account ID. Please sign in again and retry.',
+        );
+      }
     } catch (_) {
       // fire-and-forget
     }

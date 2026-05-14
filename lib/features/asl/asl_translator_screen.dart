@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:asl_app/constants/app_colors.dart';
 import 'package:asl_app/services/asl_service.dart';
 import 'package:asl_app/widgets/asl_result_card.dart';
 
@@ -290,16 +291,6 @@ class _AslTranslatorScreenState extends State<AslTranslatorScreen> {
 		}
 
 		return Scaffold(
-			appBar: AppBar(
-				title: const Text('ASL Translator'),
-				actions: [
-					IconButton(
-						tooltip: 'How to use ASL Translator',
-						onPressed: _showFeatureInstructions,
-						icon: const Icon(Icons.accessibility_new),
-					),
-				],
-			),
 			body: Stack(
 				fit: StackFit.expand,
 				children: [
