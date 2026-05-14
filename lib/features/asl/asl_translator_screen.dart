@@ -208,6 +208,30 @@ class _AslTranslatorScreenState extends State<AslTranslatorScreen> {
 		});
 	}
 
+	Future<void> _showFeatureInstructions() async {
+		if (!mounted) return;
+
+		showDialog<void>(
+			context: context,
+			builder: (context) {
+				return AlertDialog(
+					title: const Text('ASL Translator'),
+					content: const SingleChildScrollView(
+						child: Text(
+							'This feature records a short video of a signed word, sends it to the translation service, and shows the most likely result.\n\nHow to use:\n- Hold RECORD to start recording.\n- Sign one clear word in front of the camera.\n- Release RECORD to stop, or wait for the 4 second timer.\n- Wait for processing, then review the prediction and tap Speak if you want it read aloud.',
+						),
+					),
+					actions: [
+						TextButton(
+							onPressed: () => Navigator.of(context).pop(),
+							child: const Text('Got it'),
+						),
+					],
+				);
+			},
+		);
+	}
+
 	@override
 	void dispose() {
 		_recordingTimer?.cancel();
@@ -266,6 +290,16 @@ class _AslTranslatorScreenState extends State<AslTranslatorScreen> {
 		}
 
 		return Scaffold(
+			appBar: AppBar(
+				title: const Text('ASL Translator'),
+				actions: [
+					IconButton(
+						tooltip: 'How to use ASL Translator',
+						onPressed: _showFeatureInstructions,
+						icon: const Icon(Icons.accessibility_new),
+					),
+				],
+			),
 			body: Stack(
 				fit: StackFit.expand,
 				children: [

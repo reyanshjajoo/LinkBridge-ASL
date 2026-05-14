@@ -630,7 +630,6 @@ class _TextReaderPageState extends State<TextReaderPage> {
 
     final showOnTheGoStatus =
         _recognizedText.trim().isNotEmpty && _recognizedText != "Reading...";
-    final bottomPadding = MediaQuery.paddingOf(context).bottom + 24;
 
     return Scaffold(
       body: Stack(
