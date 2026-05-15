@@ -322,7 +322,13 @@ If using an Emulator (Android Studio AVD):
 
 ### Android (Recommended)
 
-**Download:** [app-release.apk](./app-release.apk)
+Split release APKs are available here:
+
+- [arm64-v8a](./release-apks/app-arm64-v8a-release.apk)
+- [armeabi-v7a](./release-apks/app-armeabi-v7a-release.apk)
+- [x86_64](./release-apks/app-x86_64-release.apk)
+
+Most modern Android phones should use `arm64-v8a`. Use `armeabi-v7a` only for older 32-bit devices, and `x86_64` for emulators or Intel-based Android devices.
 
 #### Installation Steps:
 
@@ -333,13 +339,13 @@ If using an Emulator (Android Studio AVD):
    - Enable **USB Debugging** (and **Install via USB** if available)
 
 2. **Install the APK:**
-   - Download `app-release.apk` to your computer
+    - Download the APK that matches your device architecture
    - Connect your Android phone via USB
    - Run:
      ```bash
-     adb install app-release.apk
+       adb install release-apks/app-arm64-v8a-release.apk
      ```
-   - Or transfer the file to your phone and use a file manager to tap and install
+    - Or transfer the chosen APK to your phone and use a file manager to tap and install
 
 3. **Launch the app** from your phone's app drawer
 
@@ -350,12 +356,12 @@ If using an Emulator (Android Studio AVD):
 
 ### iOS (Not Supported)
 
-⚠️ **Apple Security Restriction:** The LinkBridge app **cannot be installed on iOS devices** through this release APK file. Apple's iOS ecosystem requires all apps to be distributed through:
+⚠️ **Apple Security Restriction:** The LinkBridge app **cannot be installed on iOS devices** through these APK files. Apple's iOS ecosystem requires all apps to be distributed through:
 - The **Apple App Store** (official channel)
 - **TestFlight** (beta testing)
 - **Enterprise certificates** (for organizational deployment)
 
-Directly sideloading unsigned APKs on iOS is not possible due to Apple's closed ecosystem and code signing requirements.
+Directly sideloading Android APKs on iOS is not possible due to Apple's closed ecosystem and code signing requirements.
 
 **Workaround:** To test on iOS, you must:
 1. Build from source: `flutter run -d <ios_device_id>`
